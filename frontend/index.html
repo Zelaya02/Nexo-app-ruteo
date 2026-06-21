@@ -688,15 +688,16 @@
                     <div>clientes seleccionados</div>
                     <div style="font-size:11px;" id="totalClientes">0 total</div>
                 </div>
-
-                <div class="control-group" style="max-width:180px;">
+            </div>
+            <div class="controls-row" style="margin-top: 15px; align-items: center;">
+                <div class="control-group" style="max-width:180px; margin-bottom: 0;">
                     <label><i class="fas fa-truck"></i> Móviles</label>
                     <input type="number" id="numMoviles" value="3" min="1" max="20" class="control-input">
                 </div>
-                <button class="btn-primary" id="btnGenerar" onclick="generarRutas()"><i class="fas fa-route"></i>
-                    Generar rutas</button>
-                <button class="btn-primary" onclick="abrirModalCliente()" style="margin-left:8px;"><i class="fas fa-user-plus"></i>
-                    Agregar Cliente</button>
+                <div style="flex: 1;"></div>
+                <button id="btnGenerar" class="btn-primary" onclick="generarRutas()" style="padding:10px 20px;">
+                    <i class="fas fa-route"></i> Generar Rutas
+                </button>
             </div>
         </div>
 
@@ -746,7 +747,11 @@
                     <tr>
                         <th style="width:70px;"><label class="switch"><input type="checkbox" class="toggle" id="checkboxTodo" onclick="toggleAll()"><span class="slider"></span><span class="slider-card"></span></label></th>
                         <th>Cliente / Sucursal</th>
-                        <th style="width:100px;">Acciones</th>
+                        <th style="width:140px; text-align:center;">
+                            <button class="btn-primary" onclick="abrirModalCliente()" style="padding:8px 16px; font-size:13px; white-space:nowrap;">
+                                <i class="fas fa-user-plus"></i> Agregar Cliente
+                            </button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="cuerpoTabla">
