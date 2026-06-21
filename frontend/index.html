@@ -43,6 +43,7 @@
             
             /* Additions for Light Theme */
             --input-bg: #F3F4F8;
+            --input-focus-bg: #FFFFFF;
             --table-th-bg: #F8F9FC;
             --summary-bg: #FAFBFF;
             --summary-hover: #F0F1F6;
@@ -69,6 +70,7 @@
             
             /* Halo additions */
             --input-bg: #14151C;
+            --input-focus-bg: #1E2029;
             --table-th-bg: rgba(255, 255, 255, 0.02);
             --summary-bg: #14151C;
             --summary-hover: #1E2029;
@@ -252,7 +254,57 @@
             outline: none;
             border-color: var(--primary-main);
             box-shadow: 0 0 0 3px rgba(26, 75, 95, 0.15);
-            background: #FFFFFF;
+            background: var(--input-focus-bg);
+        }
+
+        select.control-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239AA0AE' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.293a1 1 0 0 0 1.506 0L13 5.732a1 1 0 1 0-1.506-1.464L8 9.568 3.754 5.268a1 1 0 1 0-1.506 1.464l5.247 5.561z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+            color: var(--text-light) !important;
+        }
+
+        select.control-input option {
+            background: var(--card-light);
+            color: var(--text-light) !important;
+        }
+
+        select.control-input:focus {
+            background: var(--input-bg);
+        }
+
+        /* Mejorar el contraste del texto de las opciones en modo oscuro */
+        select.control-input option:checked,
+        select.control-input option[selected],
+        select.control-input option:focus,
+        select.control-input option:hover {
+            color: var(--text-light) !important;
+            font-weight: 500;
+        }
+
+        input[type="number"].control-input,
+        input[type="text"].control-input {
+            color: var(--text-light) !important;
+            font-weight: 500;
+        }
+
+        input[type="number"].control-input:focus,
+        input[type="text"].control-input:focus {
+            background: var(--input-focus-bg);
+            color: var(--text-light) !important;
+        }
+
+        /* Mejorar el contraste del placeholder en modo oscuro */
+        input[type="number"].control-input::placeholder,
+        input[type="text"].control-input::placeholder {
+            color: rgba(154, 160, 174, 0.7) !important; /* --text-muted-light con transparencia */
+        }
+
+        input[type="number"].control-input:focus::placeholder,
+        input[type="text"].control-input:focus::placeholder {
+            color: rgba(154, 160, 174, 0.4) !important;
         }
 
         .counter-card {
@@ -553,6 +605,12 @@
             background-color: #4FC3F7;
         }
 
+        /* Mejorar el contraste del texto de las etiquetas de los switches */
+        label {
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
         /* Switch pequeño */
         .switch {
             --circle-dim: 1em;
@@ -609,6 +667,22 @@
                     <label><i class="fas fa-search"></i> Buscar cliente</label>
                     <input type="text" id="buscador" class="control-input" placeholder="Escribí el nombre...">
                 </div>
+                <div class="control-group" style="max-width:180px;">
+                    <label><i class="fas fa-tags"></i> Categoría</label>
+                    <select id="filtroCategoria" class="control-input" onchange="aplicarFiltros()">
+                        <option value="todas">Todas las categorías</option>
+                        <option value="minorista/gastronómico">Minorista / Gastronómico</option>
+                        <option value="supermercado">Supermercado</option>
+                        <option value="mayorista / distribuidor">Mayorista / Distribuidor</option>
+                    </select>
+                </div>
+                <div class="control-group" style="max-width:180px;">
+                    <label><i class="fas fa-sort"></i> Ordenar</label>
+                    <select id="ordenClientes" class="control-input" onchange="aplicarFiltros()">
+                        <option value="abc">A - Z</option>
+                        <option value="reciente">Recién agregado</option>
+                    </select>
+                </div>
                 <div class="counter-card">
                     <div class="counter-number" id="seleccionados">0</div>
                     <div>clientes seleccionados</div>
@@ -650,15 +724,16 @@
                             <option value="mayorista / distribuidor">Mayoristas primero</option>
                             <option value="minorista/gastronómico">Minoristas primero</option>
                         </select>
-                    </div>
-                    <div>
-    <label>📍 Punto de inicio (Google Maps URL)</label>
-    <input type="url" id="puntoInicio" class="control-input" placeholder="https://maps.google.com/?q=lat,lon">
-</div>
+                </div>
+                <div>
+                    <label>📍 Punto de inicio (Google Maps URL)</label>
+                    <input type="url" id="puntoInicio" class="control-input" placeholder="https://maps.google.com/?q=lat,lon">
+                </div>
                 </div>
                 <div style="margin-top:20px; display:flex; gap:12px;">
                     <button class="btn-secondary-outline" onclick="window.location.href='reglas.html'">Gestionar reglas avanzadas</button>
                     <button class="btn-primary" onclick="abrirModalTransportes()" style="padding:10px 20px;"><i class="fas fa-truck-pickup"></i> Gestión de Transportes</button>
+                    <button class="btn-secondary-outline" onclick="abrirModalRutas()" style="padding:10px 20px;"><i class="fas fa-route"></i> Editar Rutas Generadas</button>
                 </div>
             </div>
         </div>
@@ -802,13 +877,160 @@
         </div>
     </div>
 
+    <!-- MODAL DE EDICION DE RUTAS GENERADAS -->
+    <div id="modalRutas" class="modal-overlay">
+        <div class="modal-container" style="max-width:900px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2><i class="fas fa-route"></i> Editar Rutas Generadas</h2>
+                <div>
+                    <button class="btn-icon" onclick="abrirModalImportarRutas()" title="Importar rutas" style="margin-right:8px;"><i class="fas fa-upload"></i></button>
+                    <button class="btn-icon" onclick="cerrarModalRutas()"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:20px; margin-bottom:20px;">
+                <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h3 style="font-size:16px;"><i class="fas fa-list-ul"></i> Rutas disponibles</h3>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-secondary-outline" onclick="cargarTodasLasRutas()" style="padding:6px 12px; font-size:12px;"><i class="fas fa-sync-alt"></i> Refrescar</button>
+                            <button class="btn-primary" onclick="abrirModalCrearRuta()" style="padding:6px 12px; font-size:12px;"><i class="fas fa-plus"></i> Nueva Ruta</button>
+                        </div>
+                    </div>
+                    <div class="table-wrapper" style="max-height:500px; border:1px solid var(--border-light); border-radius:20px;">
+                        <table class="client-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Clientes</th>
+                                    <th>Moviles</th>
+                                    <th>Prioridad</th>
+                                    <th>Estado</th>
+                                    <th>Chofer Asignado</th>
+                                    <th style="width:120px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyRutas">
+                                <tr>
+                                    <td colspan="7" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i>
+                                        Cargando rutas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--border-light);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:13px; color:var(--text-muted-light);">
+                        <i class="fas fa-info-circle"></i> Solo se muestran rutas generadas hace menos de 1 semana (7 días)
+                    </div>
+                    <div style="font-size:13px; color:var(--text-muted-light);">
+                        Total de rutas: <span id="totalRutasContador">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE IMPORTACION DE RUTAS -->
+    <div id="modalImportarRutas" class="modal-overlay">
+        <div class="modal-container" style="max-width:600px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2><i class="fas fa-upload"></i> Importar Rutas</h2>
+                <button class="btn-icon" onclick="cerrarModalImportarRutas()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.02); padding:20px; border-radius:30px; margin-bottom:20px;">
+                <h4 style="margin-bottom:10px;"><i class="fas fa-file-upload"></i> Importar archivo KML/KMZ</h4>
+                <div id="rutasImportDropzone"
+                    style="border:2px dashed var(--accent-gold); border-radius:30px; padding:30px; text-align:center; margin-bottom:15px; cursor:pointer;"
+                    onclick="document.getElementById('rutasImportFileInput').click()"
+                    ondragover="event.preventDefault(); this.style.background='rgba(200,157,74,0.1)'"
+                    ondragleave="this.style.background='transparent'" ondrop="onRutasImportDrop(event)">
+                    <i class="fas fa-file-upload" style="font-size:36px; color:var(--accent-gold);"></i>
+                    <p style="font-size:14px;">Subir archivo de rutas .kml o .kmz</p>
+                </div>
+                <input type="file" id="rutasImportFileInput" accept=".kmz,.kml" style="display:none"
+                    onchange="onRutasImportFileSelected(this.files[0])">
+            </div>
+
+            <div style="margin-top:20px; text-align:right;"><button class="btn-secondary-outline"
+                    onclick="cerrarModalImportarRutas()">Cerrar</button></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CREACION DE NUEVA RUTA -->
+    <div id="modalCrearRuta" class="modal-overlay">
+        <div class="modal-container" style="max-width:800px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2><i class="fas fa-plus-circle"></i> Nueva Ruta Generada</h2>
+                <button class="btn-icon" onclick="cerrarModalCrearRuta()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="formCrearRuta" onsubmit="guardarRuta(event)">
+                <input type="hidden" id="rutaId">
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:20px; margin-bottom:20px;">
+                    <div>
+                        <label style="font-size:12px; font-weight:600;">Fecha de creación</label>
+                        <input type="datetime-local" id="rutaFecha" class="control-input" required>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; font-weight:600;">Número de móviles</label>
+                        <input type="number" id="rutaMoviles" class="control-input" min="1" max="20" required>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:12px; font-weight:600;">Prioridad</label>
+                    <select id="rutaPrioridad" class="control-input">
+                        <option value="ninguna">Sin prioridad</option>
+                        <option value="supermercado">Supermercados primero</option>
+                        <option value="mayorista / distribuidor">Mayoristas primero</option>
+                        <option value="minorista/gastronómico">Minoristas primero</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:12px; font-weight:600;">Estado</label>
+                    <select id="rutaEstado" class="control-input">
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Inactivo</option>
+                        <option value="completado">Completado</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:12px; font-weight:600;">Descripción</label>
+                    <textarea id="rutaDescripcion" class="control-input" rows="3" placeholder="Descripción de la ruta..." style="resize:vertical; min-height:80px;"></textarea>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:12px; font-weight:600;">Clientes asignados</label>
+                    <div id="rutaClientesPreview" style="min-height:40px; padding:10px; border:1px solid var(--border-light); border-radius:20px; background:rgba(0,0,0,0.02);">
+                        <p style="font-size:12px; color:var(--text-muted-light);">No hay clientes seleccionados</p>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+                    <button type="button" class="btn-secondary-outline" onclick="cerrarModalCrearRuta()">
+                        Cancelar</button>
+                    <button type="submit" class="btn-primary">
+                        Guardar Ruta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // ========== VARIABLES GLOBALES ==========
         let clientes = [];
         let clientesFiltrados = [];
-        let tiposFiltro = new Set();
         let gruposAbiertos = new Set();
         let kmzPlacemarks = [];
+        let rutas = [];
 
         async function fetchWithAuth(url, options = {}) {
             const token = localStorage.getItem('nexo_token');
@@ -833,7 +1055,17 @@
 
         function aplicarFiltros() {
             const termino = document.getElementById('buscador').value.toLowerCase();
-            clientesFiltrados = clientes.filter(c => c.nombre.toLowerCase().includes(termino) && (tiposFiltro.size === 0 || tiposFiltro.has(c.tipo_cliente)));
+            const categoria = document.getElementById('filtroCategoria').value;
+            const orden = document.getElementById('ordenClientes').value;
+            clientesFiltrados = clientes.filter(c => 
+                c.nombre.toLowerCase().includes(termino) && 
+                (categoria === 'todas' || c.tipo_cliente === categoria)
+            );
+            if (orden === 'abc') {
+                clientesFiltrados.sort((a, b) => a.nombre.localeCompare(b.nombre));
+            } else {
+                clientesFiltrados.sort((a, b) => b.id - a.id);
+            }
             actualizarTabla();
             actualizarContadores();
         }
@@ -1146,6 +1378,7 @@
 
         document.getElementById('buscador').addEventListener('input', () => aplicarFiltros());
         cargarClientes();
+        cargarRutas();
     </script>
 
     <!-- PANTALLA DE CARGA GENERAL (CELESTE & DORADO GLASS CON CAMIÓN ANIMADO) -->
