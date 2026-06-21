@@ -881,53 +881,45 @@
     <div id="modalRutas" class="modal-overlay">
         <div class="modal-container" style="max-width:900px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2><i class="fas fa-route"></i> Editar Rutas Generadas</h2>
-                <div>
-                    <button class="btn-icon" onclick="abrirModalImportarRutas()" title="Importar rutas" style="margin-right:8px;"><i class="fas fa-upload"></i></button>
-                    <button class="btn-icon" onclick="cerrarModalRutas()"><i class="fas fa-times"></i></button>
+                <h2><i class="fas fa-route"></i> Gestión de Rutas</h2>
+                <button class="btn-icon" onclick="cerrarModalRutas()"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1.5px solid var(--border-light); padding-bottom:10px;">
+                <button id="btnTabPendientes" class="btn-glass" style="background:var(--primary-main); border-color:var(--primary-main);" onclick="cambiarTabRutas('pendientes')"><i class="fas fa-clock"></i> Pendientes <span id="contadorPendientes" class="badge-tag" style="background:rgba(255,255,255,0.2); color:white; margin-left:6px;">0</span></button>
+                <button id="btnTabFinalizadas" class="btn-glass" style="color:var(--text-light); border-color:var(--border-light);" onclick="cambiarTabRutas('finalizadas')"><i class="fas fa-check-circle"></i> Finalizadas <span id="contadorFinalizadas" class="badge-tag" style="margin-left:6px;">0</span></button>
+            </div>
+            <div id="panelRutasPendientes">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <p style="font-size:13px; color:var(--text-muted-light);"><i class="fas fa-info-circle"></i> Rutas activas en curso.</p>
+                    <button class="btn-secondary-outline" onclick="cargarTodasLasRutas()" style="padding:6px 12px; font-size:12px;"><i class="fas fa-sync-alt"></i> Refrescar</button>
+                </div>
+                <div class="table-wrapper" style="max-height:450px; border:1px solid var(--border-light); border-radius:20px;">
+                    <table class="client-table">
+                        <thead><tr><th>Fecha</th><th>Clientes</th><th>Móvil</th><th>Chofer</th><th>Vehículo</th><th style="width:180px;">Acciones</th></tr></thead>
+                        <tbody id="tbodyRutasPendientes"><tr><td colspan="6" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
-
-            <div style="display:flex; gap:20px; margin-bottom:20px;">
-                <div style="flex:1;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <h3 style="font-size:16px;"><i class="fas fa-list-ul"></i> Rutas disponibles</h3>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn-secondary-outline" onclick="cargarTodasLasRutas()" style="padding:6px 12px; font-size:12px;"><i class="fas fa-sync-alt"></i> Refrescar</button>
-                            <button class="btn-primary" onclick="abrirModalCrearRuta()" style="padding:6px 12px; font-size:12px;"><i class="fas fa-plus"></i> Nueva Ruta</button>
-                        </div>
-                    </div>
-                    <div class="table-wrapper" style="max-height:500px; border:1px solid var(--border-light); border-radius:20px;">
-                        <table class="client-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Clientes</th>
-                                    <th>Moviles</th>
-                                    <th>Prioridad</th>
-                                    <th>Estado</th>
-                                    <th>Chofer Asignado</th>
-                                    <th style="width:120px;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodyRutas">
-                                <tr>
-                                    <td colspan="7" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i>
-                                        Cargando rutas...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+            <div id="panelRutasFinalizadas" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <p style="font-size:13px; color:var(--text-muted-light);"><i class="fas fa-check-circle"></i> Rutas completadas.</p>
+                    <button class="btn-secondary-outline" onclick="cargarTodasLasRutas()" style="padding:6px 12px; font-size:12px;"><i class="fas fa-sync-alt"></i> Refrescar</button>
+                </div>
+                <div class="table-wrapper" style="max-height:450px; border:1px solid var(--border-light); border-radius:20px;">
+                    <table class="client-table">
+                        <thead><tr><th>Fecha</th><th>Clientes</th><th>Móvil</th><th>Chofer</th><th>Vehículo</th><th style="width:100px;">Acciones</th></tr></thead>
+                        <tbody id="tbodyRutasFinalizadas"><tr><td colspan="6" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
 
             <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--border-light);">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-size:13px; color:var(--text-muted-light);">
-                        <i class="fas fa-info-circle"></i> Solo se muestran rutas generadas hace menos de 1 semana (7 días)
+                        <i class="fas fa-shield-alt"></i> Rutas con +7 días requieren contraseña para eliminar.
                     </div>
                     <div style="font-size:13px; color:var(--text-muted-light);">
-                        Total de rutas: <span id="totalRutasContador">0</span>
+                        Total: <span id="totalRutasContador">0</span> rutas
                     </div>
                 </div>
             </div>
@@ -1383,9 +1375,21 @@
             document.getElementById('modalCrearRuta').style.display = 'none';
         }
 
+        function cambiarTabRutas(tab) {
+            document.getElementById('panelRutasPendientes').style.display = tab === 'pendientes' ? 'block' : 'none';
+            document.getElementById('panelRutasFinalizadas').style.display = tab === 'finalizadas' ? 'block' : 'none';
+            document.getElementById('btnTabPendientes').style.background = tab === 'pendientes' ? 'var(--primary-main)' : 'rgba(255,255,255,0.1)';
+            document.getElementById('btnTabPendientes').style.color = tab === 'pendientes' ? 'white' : 'var(--text-light)';
+            document.getElementById('btnTabFinalizadas').style.background = tab === 'finalizadas' ? 'var(--primary-main)' : 'rgba(255,255,255,0.1)';
+            document.getElementById('btnTabFinalizadas').style.color = tab === 'finalizadas' ? 'white' : 'var(--text-light)';
+        }
+
         async function cargarTodasLasRutas() {
-            const tbody = document.getElementById('tbodyRutas');
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Cargando rutas...</td></tr>';
+            const tbodyPendientes = document.getElementById('tbodyRutasPendientes');
+            const tbodyFinalizadas = document.getElementById('tbodyRutasFinalizadas');
+            if(tbodyPendientes) tbodyPendientes.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Cargando rutas...</td></tr>';
+            if(tbodyFinalizadas) tbodyFinalizadas.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Cargando rutas...</td></tr>';
+            
             try {
                 const res = await fetchWithAuth('/api/rutas-todas');
                 if (!res.ok) throw new Error();
@@ -1393,41 +1397,49 @@
 
                 document.getElementById('totalRutasContador').innerText = rutasData.length;
 
-                if (rutasData.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;">No hay rutas registradas.</td></tr>';
-                    return;
-                }
+                const pendientes = rutasData.filter(r => r.estado === 'en_curso');
+                const finalizadas = rutasData.filter(r => r.estado === 'finalizada');
 
-                tbody.innerHTML = rutasData.map(r => {
-                    const esActiva = r.estado === 'en_curso';
-                    const estadoBadge = esActiva
-                        ? '<span class="badge-tag" style="background:var(--primary-main); color:white; padding:4px 10px; border-radius:20px;">En curso</span>'
-                        : '<span class="badge-tag" style="background:var(--success); color:white; padding:4px 10px; border-radius:20px;">Finalizada</span>';
+                document.getElementById('contadorPendientes').innerText = pendientes.length;
+                document.getElementById('contadorFinalizadas').innerText = finalizadas.length;
 
-                    const btnFinalizar = esActiva
-                        ? `<button class="btn-primary" onclick="forzarFinalizarRuta('${r.token}')" style="padding:4px 10px; font-size:11px; background:var(--danger); border-color:var(--danger);" title="Forzar Finalizacion"><i class="fas fa-check-double"></i> Finalizar</button>`
-                        : '';
+                const renderRutas = (rutasArray, esPendiente) => {
+                    if (rutasArray.length === 0) return '<tr><td colspan="6" style="text-align:center; padding:40px;">No hay rutas.</td></tr>';
+                    return rutasArray.map(r => {
+                        const btnFinalizar = esPendiente
+                            ? `<button class="btn-primary" onclick="forzarFinalizarRuta('${r.token}')" style="padding:4px 10px; font-size:11px; background:var(--danger); border-color:var(--danger);" title="Forzar Finalizacion"><i class="fas fa-check-double"></i> Finalizar</button>`
+                            : '';
+                            
+                        const btnEliminar = `<button class="btn-icon" onclick="eliminarRuta('${r.token}', '${r.fecha}')" style="color:var(--danger);" title="Eliminar"><i class="fas fa-trash"></i></button>`;
+                        const btnEditar = esPendiente ? `<button class="btn-icon" onclick="editarRuta('${r.token}')" title="Editar"><i class="fas fa-edit"></i></button>` : '';
 
-                    const fechaStr = r.fecha ? r.fecha.substring(0, 16) : '-';
+                        const fechaStr = r.fecha ? r.fecha.substring(0, 16) : '-';
 
-                    return `<tr>
-                        <td style="font-size:12px;">${fechaStr}</td>
-                        <td>${r.cantidad_clientes} clientes</td>
-                        <td>Movil ${r.movil_numero}</td>
-                        <td>-</td>
-                        <td>${estadoBadge}</td>
-                        <td>${escapeHtml(r.chofer_nombre || 'Sin asignar')}</td>
-                        <td>
-                            <div style="display:flex; gap:6px; align-items:center;">
-                                <a href="ruta.html?token=${r.token}" target="_blank" class="btn-icon" title="Ver ruta"><i class="fas fa-external-link-alt"></i></a>
-                                ${btnFinalizar}
-                            </div>
-                        </td>
-                    </tr>`;
-                }).join('');
+                        return `<tr>
+                            <td style="font-size:12px;">${fechaStr}</td>
+                            <td>${r.cantidad_clientes} clientes</td>
+                            <td>Móvil ${r.movil_numero}</td>
+                            <td>${escapeHtml(r.chofer_nombre || 'Sin asignar')}</td>
+                            <td>${escapeHtml(r.vehiculo_nombre || 'Sin asignar')}</td>
+                            <td>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <a href="ruta.html?token=${r.token}" target="_blank" class="btn-icon" title="Ver ruta"><i class="fas fa-external-link-alt"></i></a>
+                                    ${btnEditar}
+                                    ${btnFinalizar}
+                                    ${btnEliminar}
+                                </div>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                };
+
+                if(tbodyPendientes) tbodyPendientes.innerHTML = renderRutas(pendientes, true);
+                if(tbodyFinalizadas) tbodyFinalizadas.innerHTML = renderRutas(finalizadas, false);
+
             } catch (error) {
                 console.error('Error cargando rutas:', error);
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--danger); padding:40px;">Error al cargar las rutas.</td></tr>';
+                if(tbodyPendientes) tbodyPendientes.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--danger); padding:40px;">Error al cargar las rutas.</td></tr>';
+                if(tbodyFinalizadas) tbodyFinalizadas.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--danger); padding:40px;">Error al cargar las rutas.</td></tr>';
             }
         }
 
@@ -1445,6 +1457,46 @@
             } catch (error) {
                 alert('❌ ' + error.message);
             }
+        }
+
+        async function eliminarRuta(token, fechaStr) {
+            // Verificar antiguedad
+            let requierePassword = false;
+            if (fechaStr) {
+                const fechaRuta = new Date(fechaStr);
+                const ahora = new Date();
+                const diffDias = (ahora - fechaRuta) / (1000 * 60 * 60 * 24);
+                if (diffDias >= 7) requierePassword = true;
+            }
+
+            let password = null;
+            if (requierePassword) {
+                password = prompt('Esta ruta tiene más de 7 días. Ingrese contraseña de administrador para eliminarla:');
+                if (password === null) return; // Cancelado
+            } else {
+                if (!confirm('¿Estás seguro de eliminar esta ruta? Esta acción no se puede deshacer.')) return;
+            }
+
+            try {
+                const res = await fetchWithAuth('/api/rutas-todas', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, password })
+                });
+                if (!res.ok) {
+                    if (res.status === 403) throw new Error('Contraseña incorrecta o permisos insuficientes');
+                    throw new Error('Error al eliminar ruta');
+                }
+                alert('✅ Ruta eliminada correctamente.');
+                cargarTodasLasRutas();
+            } catch (error) {
+                alert('❌ ' + error.message);
+            }
+        }
+
+        function editarRuta(token) {
+            alert('Funcionalidad de edición avanzada en desarrollo. Token: ' + token);
+            // Aquí iría el código para abrir un modal con el formulario de edición (clientes, chofer, etc)
         }
 
         function cargarRutas() {

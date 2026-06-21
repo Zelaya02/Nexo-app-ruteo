@@ -848,6 +848,65 @@ public class Main {
                 } catch (Exception e) {
                     e.printStackTrace(); sendError(exchange, 500, "Error interno del servidor");
                 }
+            } else if ("DELETE".equals(exchange.getRequestMethod())) {
+                try {
+                    String body = new BufferedReader(
+                            new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8)).lines()
+                            .collect(Collectors.joining("\n"));
+                    Map<String, Object> req = gson.fromJson(body, Map.class);
+                    String token = (String) req.get("token");
+                    String password = req.containsKey("password") ? (String) req.get("password") : null;
+
+                    if (token == null || token.isEmpty()) {
+                        sendError(exchange, 400, "Token requerido");
+                        return;
+                    }
+
+                    try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+                        // Verificar antiguedad de la ruta
+                        PreparedStatement checkStmt = conn.prepareStatement(
+                            "SELECT fecha FROM rutas_generadas WHERE token = ?");
+                        checkStmt.setString(1, token);
+                        ResultSet rs = checkStmt.executeQuery();
+                        
+                        if (!rs.next()) {
+                            sendError(exchange, 404, "Ruta no encontrada");
+                            return;
+                        }
+                        
+                        Timestamp fechaRuta = rs.getTimestamp("fecha");
+                        long diffMs = System.currentTimeMillis() - fechaRuta.getTime();
+                        long diffDias = diffMs / (1000 * 60 * 60 * 24);
+                        
+                        // Si tiene mas de 7 dias, requiere contrasena
+                        if (diffDias >= 7) {
+                            if (password == null || password.isEmpty()) {
+                                sendError(exchange, 403, "REQUIERE_PASSWORD");
+                                return;
+                            }
+                            // Verificar contrasena contra la BD
+                            Usuario usuario = usuarioRepo.login("admin", password);
+                            if (usuario == null) {
+                                sendError(exchange, 403, "Contrasena incorrecta");
+                                return;
+                            }
+                        }
+                        
+                        // Eliminar la ruta
+                        PreparedStatement deleteStmt = conn.prepareStatement(
+                            "DELETE FROM rutas_generadas WHERE token = ?");
+                        deleteStmt.setString(1, token);
+                        int deleted = deleteStmt.executeUpdate();
+                        
+                        if (deleted > 0) {
+                            sendResponse(exchange, 200, "{\"status\":\"ok\",\"message\":\"Ruta eliminada\"}");
+                        } else {
+                            sendError(exchange, 404, "Ruta no encontrada");
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace(); sendError(exchange, 500, "Error interno del servidor");
+                }
             } else {
                 exchange.sendResponseHeaders(405, -1);
             }
