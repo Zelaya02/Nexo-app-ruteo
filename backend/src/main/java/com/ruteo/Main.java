@@ -145,7 +145,14 @@ public class Main {
                     "vehiculo_id INTEGER, " +
                     "chofer_nombre TEXT, " +
                     "vehiculo_nombre TEXT, " +
-                    "fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+                    "fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "estado TEXT DEFAULT 'en_curso')");
+
+            try {
+                stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'en_curso'");
+            } catch (SQLException ignored) {
+                // Ignore if not supported by the DB version, though IF NOT EXISTS is standard in modern Postgres
+            }
 
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS entregas (" +
                     "id SERIAL PRIMARY KEY, " +
@@ -254,6 +261,8 @@ public class Main {
         server.createContext("/api/asignar-recursos", new AsignarRecursosHandler());
         server.createContext("/api/ruta", new RutaTokenHandler());
         server.createContext("/api/actualizar-estado", new EstadoHandler());
+        server.createContext("/api/finalizar-ruta", new FinalizarRutaHandler());
+        server.createContext("/api/rutas-todas", new RutasTodasHandler());
         server.createContext("/api/estadisticas", new EstadisticasHandler());
         server.createContext("/api/reportes", new ReportesHandler());
         server.createContext("/api/health", new HealthHandler());
@@ -756,6 +765,91 @@ public class Main {
                 } catch (Exception e) {
                     e.printStackTrace(); sendError(exchange, 500, "Error interno del servidor");
                 }
+            }
+        }
+    }
+
+    static class FinalizarRutaHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            setCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod()))
+                return;
+
+            if ("POST".equals(exchange.getRequestMethod())) {
+                try {
+                    String body = new BufferedReader(
+                            new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8)).lines()
+                            .collect(Collectors.joining("\n"));
+                    Map<String, Object> req = gson.fromJson(body, Map.class);
+                    String token = (String) req.get("token");
+
+                    try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+                        String sql = "UPDATE rutas_generadas SET estado = 'finalizada' WHERE token = ?";
+                        PreparedStatement pstmt = conn.prepareStatement(sql);
+                        pstmt.setString(1, token);
+                        int updated = pstmt.executeUpdate();
+                        if (updated > 0) {
+                            sendResponse(exchange, 200, "{\"status\":\"ok\"}");
+                        } else {
+                            sendError(exchange, 404, "Ruta no encontrada");
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace(); sendError(exchange, 500, "Error interno del servidor");
+                }
+            }
+        }
+    }
+
+    static class RutasTodasHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            setCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+            if (!isAuthorized(exchange)) {
+                sendError(exchange, 401, "No autorizado");
+                return;
+            }
+            if ("GET".equals(exchange.getRequestMethod())) {
+                try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+                    // Obtener las ultimas 100 rutas generadas
+                    String sql = "SELECT token, movil_numero, clientes_json, distancia_total, chofer_nombre, vehiculo_nombre, fecha, estado FROM rutas_generadas ORDER BY fecha DESC LIMIT 100";
+                    Statement stmt = conn.createStatement();
+                    ResultSet rs = stmt.executeQuery(sql);
+                    List<Map<String, Object>> rutasList = new ArrayList<>();
+                    
+                    while (rs.next()) {
+                        Map<String, Object> r = new HashMap<>();
+                        r.put("token", rs.getString("token"));
+                        r.put("movil_numero", rs.getInt("movil_numero"));
+                        r.put("distancia_total", rs.getDouble("distancia_total"));
+                        r.put("chofer_nombre", rs.getString("chofer_nombre"));
+                        r.put("vehiculo_nombre", rs.getString("vehiculo_nombre"));
+                        r.put("fecha", rs.getTimestamp("fecha") != null ? rs.getTimestamp("fecha").toString() : "");
+                        r.put("estado", rs.getString("estado"));
+                        
+                        // Parsear clientes para saber la cantidad
+                        String clientesJson = rs.getString("clientes_json");
+                        int cantidadClientes = 0;
+                        if (clientesJson != null && !clientesJson.isEmpty()) {
+                            try {
+                                com.google.gson.JsonArray array = JsonParser.parseString(clientesJson).getAsJsonArray();
+                                cantidadClientes = array.size();
+                            } catch (Exception ignored) {}
+                        }
+                        r.put("cantidad_clientes", cantidadClientes);
+                        rutasList.add(r);
+                    }
+                    sendResponse(exchange, 200, gson.toJson(rutasList));
+                } catch (Exception e) {
+                    e.printStackTrace(); sendError(exchange, 500, "Error interno del servidor");
+                }
+            } else {
+                exchange.sendResponseHeaders(405, -1);
             }
         }
     }
@@ -1632,6 +1726,18 @@ public class Main {
                                     p2.setInt(1, vId);
                                     ResultSet rs2 = p2.executeQuery();
                                     if (rs2.next()) vNombre = rs2.getString("nombre");
+                                }
+
+                                // Verificar si el chofer ya tiene una ruta en curso
+                                try (PreparedStatement pCheck = conn.prepareStatement("SELECT token FROM rutas_generadas WHERE chofer_id = ? AND estado = 'en_curso' AND token != ?")) {
+                                    pCheck.setInt(1, cId);
+                                    pCheck.setString(2, token);
+                                    ResultSet rsCheck = pCheck.executeQuery();
+                                    if (rsCheck.next()) {
+                                        conn.rollback();
+                                        sendError(exchange, 400, "El chofer " + cNombre + " ya tiene una ruta en curso y debe finalizarla primero.");
+                                        return;
+                                    }
                                 }
 
                                 // Si viene la lista de clientes (por cambios en el ruteo manual), actualizar clientes_json y entregas

@@ -700,7 +700,12 @@
                     rutasActivas = true;
                     actualizarBotonesWhatsApp();
                 } else {
-                    throw new Error("Error al guardar");
+                    let errMsg = "Error al guardar";
+                    try {
+                        const errObj = await response.json();
+                        if (errObj && errObj.error) errMsg = errObj.error;
+                    } catch(e) {}
+                    throw new Error(errMsg);
                 }
             } catch (error) {
                 alert("❌ No se pudo confirmar: " + error.message);

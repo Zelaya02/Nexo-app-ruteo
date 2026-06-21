@@ -1362,6 +1362,95 @@
             } 
         }
 
+        // ================= GESTION DE RUTAS (EDICION Y FINALIZACION) =================
+        function abrirModalRutas() {
+            document.getElementById('modalRutas').style.display = 'flex';
+            cargarTodasLasRutas();
+        }
+        function cerrarModalRutas() {
+            document.getElementById('modalRutas').style.display = 'none';
+        }
+        function abrirModalImportarRutas() {
+            document.getElementById('modalImportarRutas').style.display = 'flex';
+        }
+        function cerrarModalImportarRutas() {
+            document.getElementById('modalImportarRutas').style.display = 'none';
+        }
+        function abrirModalCrearRuta() {
+            document.getElementById('modalCrearRuta').style.display = 'flex';
+        }
+        function cerrarModalCrearRuta() {
+            document.getElementById('modalCrearRuta').style.display = 'none';
+        }
+
+        async function cargarTodasLasRutas() {
+            const tbody = document.getElementById('tbodyRutas');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Cargando rutas...</td></tr>';
+            try {
+                const res = await fetchWithAuth('/api/rutas-todas');
+                if (!res.ok) throw new Error();
+                const rutasData = await res.json();
+
+                document.getElementById('totalRutasContador').innerText = rutasData.length;
+
+                if (rutasData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;">No hay rutas registradas.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = rutasData.map(r => {
+                    const esActiva = r.estado === 'en_curso';
+                    const estadoBadge = esActiva
+                        ? '<span class="badge-tag" style="background:var(--primary-main); color:white; padding:4px 10px; border-radius:20px;">En curso</span>'
+                        : '<span class="badge-tag" style="background:var(--success); color:white; padding:4px 10px; border-radius:20px;">Finalizada</span>';
+
+                    const btnFinalizar = esActiva
+                        ? `<button class="btn-primary" onclick="forzarFinalizarRuta('${r.token}')" style="padding:4px 10px; font-size:11px; background:var(--danger); border-color:var(--danger);" title="Forzar Finalizacion"><i class="fas fa-check-double"></i> Finalizar</button>`
+                        : '';
+
+                    const fechaStr = r.fecha ? r.fecha.substring(0, 16) : '-';
+
+                    return `<tr>
+                        <td style="font-size:12px;">${fechaStr}</td>
+                        <td>${r.cantidad_clientes} clientes</td>
+                        <td>Movil ${r.movil_numero}</td>
+                        <td>-</td>
+                        <td>${estadoBadge}</td>
+                        <td>${escapeHtml(r.chofer_nombre || 'Sin asignar')}</td>
+                        <td>
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <a href="ruta.html?token=${r.token}" target="_blank" class="btn-icon" title="Ver ruta"><i class="fas fa-external-link-alt"></i></a>
+                                ${btnFinalizar}
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (error) {
+                console.error('Error cargando rutas:', error);
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--danger); padding:40px;">Error al cargar las rutas.</td></tr>';
+            }
+        }
+
+        async function forzarFinalizarRuta(token) {
+            if (!confirm('¿Estas seguro de que quieres finalizar esta ruta a la fuerza? Esto liberara al chofer para nuevas asignaciones.')) return;
+            try {
+                const res = await fetchWithAuth('/api/finalizar-ruta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token })
+                });
+                if (!res.ok) throw new Error('Error al finalizar la ruta');
+                alert('✅ Ruta finalizada correctamente. El chofer ha sido liberado.');
+                cargarTodasLasRutas();
+            } catch (error) {
+                alert('❌ ' + error.message);
+            }
+        }
+
+        function cargarRutas() {
+            // Stub - se cargan al abrir el modal
+        }
+
         function logout() { localStorage.clear(); window.location.href = 'login.html'; }
 
         function mostrarLoader(texto = "Optimizando rutas... por favor espere") {
