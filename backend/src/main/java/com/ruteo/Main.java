@@ -13,9 +13,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 import java.util.UUID;
+import java.time.Duration;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -525,23 +529,42 @@ public class Main {
                             // Vecino mas cercano para ordenar con prioridad
                             List<Cliente> ordenados = nearestNeighborWithPriority(cluster, prioridad);
 
+                            // PREPARE COORDINATE PAIRS FOR PARALLEL DISTANCE CALCULATION
+                            List<double[]> coordinatePairs = new ArrayList<>();
+                            for (int j = 0; j < ordenados.size() - 1; j++) {
+                                Cliente c = ordenados.get(j);
+                                Cliente siguiente = ordenados.get(j + 1);
+                                coordinatePairs.add(new double[]{c.lat, c.lon, siguiente.lat, siguiente.lon});
+                            }
+
+                            // PARALLEL DISTANCE CALCULATION USING CompletableFuture
+                            List<RouteService.RouteInfo> distances = new ArrayList<>();
+                            if (!coordinatePairs.isEmpty()) {
+                                List<CompletableFuture<RouteService.RouteInfo>> futures = coordinatePairs.stream()
+                                    .map(pair -> CompletableFuture.supplyAsync(() -> {
+                                        try {
+                                            return RouteService.getRoute(pair[0], pair[1], pair[2], pair[3]);
+                                        } catch (Exception e) {
+                                            double dist = haversine(pair[0], pair[1], pair[2], pair[3]) * 1.3;
+                                            return new RouteService.RouteInfo(dist, 0);
+                                        }
+                                    }, ForkJoinPool.commonPool()))
+                                    .collect(Collectors.toList());
+                                
+                                // Wait for all to complete
+                                distances = futures.stream()
+                                    .map(CompletableFuture::join)
+                                    .collect(Collectors.toList());
+                            }
+
                             double distTotal = 0;
                             List<Map<String, Object>> clientesJson = new ArrayList<>();
                             for (int j = 0; j < ordenados.size(); j++) {
                                 Cliente c = ordenados.get(j);
                                 double dist = 0;
                                 if (j < ordenados.size() - 1) {
-                                    Cliente siguiente = ordenados.get(j + 1);
-                                    try {
-                                        // Intentar usar OpenRouteService (Distancia real por carretera)
-                                        System.out.printf("  📍 ORS: %s -> %s ...%n", c.nombre, siguiente.nombre);
-                                        RouteService.RouteInfo info = RouteService.getRoute(c.lat, c.lon, siguiente.lat,
-                                                siguiente.lon);
-                                        dist = info.distanceKm;
-                                    } catch (Exception e) {
-                                        // Fallback a Haversine si falla el servicio o no hay API Key
-                                        dist = haversine(c.lat, c.lon, siguiente.lat, siguiente.lon);
-                                    }
+                                    RouteService.RouteInfo info = distances.get(j);
+                                    dist = info.distanceKm;
                                     distTotal += dist;
                                 }
                                 Map<String, Object> cmap = new HashMap<>();
@@ -1262,14 +1285,20 @@ public class Main {
         sendResponse(exchange, statusCode, gson.toJson(error));
     }
 
-    // -- New RouteService class for OpenRouteService integration --
+    // -- Optimized RouteService with Caching & Parallel Execution --
     static class RouteService {
         private static final String ORS_API_KEY = ORS_KEY.equals("PONER_AQUI_TU_API_KEY") ? System.getenv("ORS_API_KEY")
                 : ORS_KEY;
         private static final String ORS_BASE_URL = "https://api.openrouteservice.org/v2/directions/driving-car";
         private static final HttpClient httpClient = HttpClient.newBuilder()
-                .connectTimeout(java.time.Duration.ofSeconds(5))
+                .connectTimeout(java.time.Duration.ofSeconds(10))
                 .build();
+        
+        // Thread-safe cache for distances
+        private static final ConcurrentHashMap<String, Double> distanceCache = new ConcurrentHashMap<>();
+        private static final ConcurrentHashMap<String, Long> cacheTimestamps = new ConcurrentHashMap<>();
+        private static final long CACHE_TTL_HOURS = 24;
+        private static final Semaphore apiSemaphore = new Semaphore(5); // Max 5 concurrent calls
 
         static class RouteInfo {
             double distanceKm;
@@ -1282,34 +1311,84 @@ public class Main {
         }
 
         /**
-         * Calls OpenRouteService for a single leg (start -> end).
+         * Get route distance with intelligent caching and rate limiting.
+         * Falls back to Haversine with road factor (1.3x) if API unavailable.
          */
         public static RouteInfo getRoute(double startLat, double startLon, double endLat, double endLon)
                 throws IOException, InterruptedException {
-            if (ORS_API_KEY == null || ORS_API_KEY.isEmpty()) {
-                throw new IllegalStateException("OpenRouteService API key not set in environment variable ORS_API_KEY");
+            
+            String cacheKey = String.format(java.util.Locale.US, "%.6f,%.6f-%.6f,%.6f", 
+                startLat, startLon, endLat, endLon);
+            
+            // 1. Check cache first
+            if (isCacheValid(cacheKey)) {
+                return new RouteInfo(distanceCache.get(cacheKey), 0);
             }
-            String url = String.format(java.util.Locale.US, "%s?api_key=%s&start=%f,%f&end=%f,%f",
+            
+            // 2. No API key or invalid? Use Haversine with road factor
+            if (ORS_API_KEY == null || ORS_API_KEY.isEmpty() || ORS_API_KEY.equals("PONER_AQUI_TU_API_KEY")) {
+                double dist = haversine(startLat, startLon, endLat, endLon) * 1.3;
+                cacheResult(cacheKey, dist);
+                return new RouteInfo(dist, 0);
+            }
+            
+            // 3. Rate limit: acquire semaphore
+            apiSemaphore.acquire();
+            try {
+                String url = String.format(java.util.Locale.US, "%s?api_key=%s&start=%.6f,%.6f&end=%.6f,%.6f",
                     ORS_BASE_URL, ORS_API_KEY, startLon, startLat, endLon, endLat);
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(java.net.URI.create(url))
-                    .timeout(java.time.Duration.ofSeconds(5))
-                    .GET()
-                    .header("Accept",
-                            "application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8")
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
-                throw new IOException("OpenRouteService error: " + response.statusCode() + " " + response.body());
+                
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(java.net.URI.create(url))
+                        .timeout(java.time.Duration.ofSeconds(10))
+                        .GET()
+                        .header("Accept", "application/json")
+                        .build();
+                
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                
+                if (response.statusCode() != 200) {
+                    // Fallback to Haversine with road factor
+                    double dist = haversine(startLat, startLon, endLat, endLon) * 1.3;
+                    cacheResult(cacheKey, dist);
+                    return new RouteInfo(dist, 0);
+                }
+                
+                JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                JsonObject summary = json.getAsJsonArray("features").get(0).getAsJsonObject()
+                        .getAsJsonObject("properties").getAsJsonObject("summary");
+                double distanceKm = summary.get("distance").getAsDouble() / 1000.0;
+                double durationSec = summary.get("duration").getAsDouble();
+                
+                cacheResult(cacheKey, distanceKm);
+                return new RouteInfo(distanceKm, durationSec);
+                
+            } catch (Exception e) {
+                // Fallback on any error
+                double dist = haversine(startLat, startLon, endLat, endLon) * 1.3;
+                cacheResult(cacheKey, dist);
+                return new RouteInfo(dist, 0);
+            } finally {
+                apiSemaphore.release();
             }
-            // Small delay to respect API rate limits (40 req/min on free tier)
-            Thread.sleep(150);
-            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-            JsonObject summary = json.getAsJsonArray("features").get(0).getAsJsonObject()
-                    .getAsJsonObject("properties").getAsJsonObject("summary");
-            double distanceMeters = summary.get("distance").getAsDouble();
-            double durationSeconds = summary.get("duration").getAsDouble();
-            return new RouteInfo(distanceMeters / 1000.0, durationSeconds);
+        }
+        
+        private static boolean isCacheValid(String key) {
+            Long timestamp = cacheTimestamps.get(key);
+            if (timestamp == null) return false;
+            return (System.currentTimeMillis() - timestamp) < CACHE_TTL_HOURS * 60 * 60 * 1000;
+        }
+        
+        private static void cacheResult(String key, double distance) {
+            distanceCache.put(key, distance);
+            cacheTimestamps.put(key, System.currentTimeMillis());
+            
+            // Cleanup old entries periodically
+            if (distanceCache.size() > 10000) {
+                long cutoff = System.currentTimeMillis() - CACHE_TTL_HOURS * 60 * 60 * 1000;
+                cacheTimestamps.entrySet().removeIf(e -> e.getValue() < cutoff);
+                distanceCache.keySet().removeIf(k -> !cacheTimestamps.containsKey(k));
+            }
         }
     }
 
