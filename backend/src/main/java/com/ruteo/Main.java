@@ -892,6 +892,13 @@ public class Main {
                             }
                         }
                         
+                        // Eliminar entregas asociadas primero para evitar error de clave foránea
+                        try (PreparedStatement delEntregasStmt = conn.prepareStatement(
+                            "DELETE FROM entregas WHERE ruta_token = ?")) {
+                            delEntregasStmt.setString(1, token);
+                            delEntregasStmt.executeUpdate();
+                        }
+
                         // Eliminar la ruta
                         PreparedStatement deleteStmt = conn.prepareStatement(
                             "DELETE FROM rutas_generadas WHERE token = ?");
