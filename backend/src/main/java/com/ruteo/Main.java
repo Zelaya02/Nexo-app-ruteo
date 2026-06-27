@@ -158,6 +158,11 @@ public class Main {
                 // Ignore if not supported by the DB version, though IF NOT EXISTS is standard in modern Postgres
             }
 
+            try {
+                stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+            } catch (SQLException ignored) {
+            }
+
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS entregas (" +
                     "id SERIAL PRIMARY KEY, " +
                     "ruta_token TEXT, " +
