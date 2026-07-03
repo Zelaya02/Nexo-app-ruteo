@@ -1056,8 +1056,8 @@ public class Main {
 
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
                     // Totales por Estado
-                    String sql = "SELECT estado, COUNT(*) as cantidad FROM entregas e JOIN rutas_generadas r ON e.ruta_token = r.token WHERE "
-                            + dateFilter + " GROUP BY estado";
+                    String sql = "SELECT e.estado, COUNT(*) as cantidad FROM entregas e JOIN rutas_generadas r ON e.ruta_token = r.token WHERE "
+                            + dateFilter + " GROUP BY e.estado";
                     Statement stmt = conn.createStatement();
                     ResultSet rs = stmt.executeQuery(sql);
 
