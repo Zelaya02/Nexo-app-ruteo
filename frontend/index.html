@@ -1083,7 +1083,7 @@
                 const todosSel = lista.every(c => c.seleccionado);
                 const selCount = lista.filter(c => c.seleccionado).length;
                 const abierto = gruposAbiertos.has(nom);
-                html += `<tr style="background:rgba(0,0,0,0.02);"><td colspan="3" style="padding:0;"><details ${abierto ? 'open' : ''} ontoggle="registrarToggle('${nom}',this.open)"><summary style="padding:15px; cursor:pointer; display:flex; justify-content:space-between;"><div><label class="switch" style="display:inline-flex; vertical-align:middle;"><input type="checkbox" class="toggle" ${todosSel ? 'checked' : ''} onclick="event.stopPropagation(); toggleGrupo('${nom}',this.checked)"><span class="slider"></span><span class="slider-card"></span></label> <i class="fas fa-store"></i> ${nom.toUpperCase()} <span class="badge-tag">${lista.length}</span></div><div>${selCount} seleccionados <i class="fas fa-chevron-down"></i></div></summary><table style="width:100%">${lista.map(c => renderFila(c)).join('')}</table></details></td></tr>`;
+                html += `<tr style="background:rgba(0,0,0,0.02);"><td colspan="3" style="padding:0;"><details ${abierto ? 'open' : ''} ontoggle="registrarToggle('${nom}',this.open)"><summary style="padding:15px; cursor:pointer; display:flex; justify-content:space-between;"><div><label class="switch" style="display:inline-flex; vertical-align:middle;"><input type="checkbox" class="toggle" ${todosSel ? 'checked' : ''} onclick="event.stopPropagation(); toggleGrupo('${nom}',this.checked)"><span class="slider"></span><span class="slider-card"></span></label> <i class="fas fa-store"></i> ${nom.toUpperCase()} <span class="badge-tag">${lista.length}</span></div><div><i class="fas fa-chevron-down"></i></div></summary><table style="width:100%">${lista.map(c => renderFila(c)).join('')}</table></details></td></tr>`;
             });
             individuales.forEach(c => html += renderFila(c));
             tbody.innerHTML = html;
@@ -1113,18 +1113,28 @@
                 const c = clientes.find(cl => cl.id === id);
                 if (c) el.checked = c.seleccionado;
             });
+            actualizarContador();
         }
 
         function toggleCliente(id) {
             let c = clientes.find(c => c.id === id);
             if (c) c.seleccionado = !c.seleccionado;
+            actualizarContador();
         }
 
         function seleccionarTodos(val) {
             clientes.forEach(c => c.seleccionado = val);
             document.querySelectorAll('.checkbox-cliente').forEach(el => el.checked = val);
+            actualizarContador();
         }
         function toggleAll() { seleccionarTodos(document.getElementById('checkboxTodo').checked); }
+        function actualizarContador() {
+            const sel = clientes.filter(c => c.seleccionado).length;
+            const elSel = document.getElementById('seleccionados');
+            const elTotal = document.getElementById('totalClientes');
+            if (elSel) elSel.innerText = sel;
+            if (elTotal) elTotal.innerText = clientes.length + ' total';
+        }
         function escapeHtml(t) { if (!t) return ''; const div = document.createElement('div'); div.textContent = t; return div.innerHTML; }
 
         function toggleConfig() {
