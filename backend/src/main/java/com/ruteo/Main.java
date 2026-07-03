@@ -1048,7 +1048,7 @@ public class Main {
                     periodo = query.split("periodo=")[1].split("&")[0];
                 }
 
-                String dateFilter = switch (periodo) {
+String dateFilter = switch (periodo) {
                     case "semana" -> "COALESCE(r.fecha, CURRENT_TIMESTAMP) >= CURRENT_DATE - INTERVAL '7 days'";
                     case "mes" -> "COALESCE(r.fecha, CURRENT_TIMESTAMP) >= CURRENT_DATE - INTERVAL '30 days'";
                     default -> "CAST(COALESCE(r.fecha, CURRENT_TIMESTAMP) AS DATE) = CURRENT_DATE";
