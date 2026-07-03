@@ -1087,6 +1087,7 @@
             });
             individuales.forEach(c => html += renderFila(c));
             tbody.innerHTML = html;
+            actualizarContador();
         }
 
         function renderFila(c) {
