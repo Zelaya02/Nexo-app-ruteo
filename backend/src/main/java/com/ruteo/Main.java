@@ -152,17 +152,6 @@ public class Main {
                     "fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "estado TEXT DEFAULT 'en_curso')");
 
-            try {
-                stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'en_curso'");
-            } catch (SQLException ignored) {
-                // Ignore if not supported by the DB version, though IF NOT EXISTS is standard in modern Postgres
-            }
-
-            try {
-                stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
-            } catch (SQLException ignored) {
-            }
-
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS entregas (" +
                     "id SERIAL PRIMARY KEY, " +
                     "ruta_token TEXT, " +
@@ -171,6 +160,16 @@ public class Main {
                     "observacion TEXT, " +
                     "orden_en_ruta INTEGER, " +
                     "fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
+
+            // Modificaciones para asegurar que columnas nuevas existan en BD viejas
+            try { stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'en_curso'"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS chofer_id INTEGER"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS vehiculo_id INTEGER"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS chofer_nombre TEXT"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS vehiculo_nombre TEXT"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS url_google TEXT"); } catch (SQLException ignored) {}
 
             System.out.println("✅ Esquema de base de datos verificado/creado.");
             
@@ -1108,15 +1107,15 @@ public class Main {
                     res.put("rendimiento_por_movil", rendimientos);
 
                     // Historial (Tendencia)
-                    String sqlHist = "SELECT r.fecha, " +
+                    String sqlHist = "SELECT CAST(r.fecha AS DATE) as fecha_dia, " +
                             "SUM(CASE WHEN e.estado = 'entregado' THEN 1 ELSE 0 END) as ent " +
                             "FROM rutas_generadas r JOIN entregas e ON r.token = e.ruta_token " +
-                            "WHERE " + dateFilter + " GROUP BY r.fecha ORDER BY r.fecha ASC";
+                            "WHERE " + dateFilter + " GROUP BY CAST(r.fecha AS DATE) ORDER BY fecha_dia ASC";
                     ResultSet rsHist = stmt.executeQuery(sqlHist);
                     List<Map<String, Object>> historial = new ArrayList<>();
                     while (rsHist.next()) {
                         Map<String, Object> h = new HashMap<>();
-                        h.put("fecha", rsHist.getDate("fecha").toString());
+                        h.put("fecha", rsHist.getDate("fecha_dia").toString());
                         h.put("entregados", rsHist.getInt("ent"));
                         historial.add(h);
                     }
