@@ -683,11 +683,6 @@
                         <option value="reciente">Recién agregado</option>
                     </select>
                 </div>
-                <div class="counter-card">
-                    <div class="counter-number" id="seleccionados">0</div>
-                    <div>clientes seleccionados</div>
-                    <div style="font-size:11px;" id="totalClientes">0 total</div>
-                </div>
             </div>
             <div class="controls-row" style="margin-top: 15px; align-items: center;">
                 <div class="control-group" style="max-width:180px; margin-bottom: 0;">
@@ -1066,7 +1061,6 @@
                 clientesFiltrados.sort((a, b) => b.id - a.id);
             }
             actualizarTabla();
-            actualizarContadores();
         }
 
         function actualizarTabla() {
@@ -1119,22 +1113,18 @@
                 const c = clientes.find(cl => cl.id === id);
                 if (c) el.checked = c.seleccionado;
             });
-            actualizarContadores();
         }
 
         function toggleCliente(id) {
             let c = clientes.find(c => c.id === id);
             if (c) c.seleccionado = !c.seleccionado;
-            actualizarContadores();
         }
 
         function seleccionarTodos(val) {
             clientes.forEach(c => c.seleccionado = val);
             document.querySelectorAll('.checkbox-cliente').forEach(el => el.checked = val);
-            actualizarContadores();
         }
         function toggleAll() { seleccionarTodos(document.getElementById('checkboxTodo').checked); }
-        function actualizarContadores() { document.getElementById('seleccionados').innerText = clientes.filter(c => c.seleccionado).length; document.getElementById('totalClientes').innerText = clientes.length; }
         function escapeHtml(t) { if (!t) return ''; const div = document.createElement('div'); div.textContent = t; return div.innerHTML; }
 
         function toggleConfig() {
