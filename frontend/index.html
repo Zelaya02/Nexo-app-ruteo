@@ -646,97 +646,6 @@
             </div>
             <div class="header-actions">
                 <button class="btn-glass" onclick="window.location.href='estadisticas.html'"><i
-                        class="fas fa-chart-line"></i> Estadísticas</button>
-                <button class="btn-glass" onclick="window.location.href='seguimiento.html'"><i
-                        class="fas fa-check-circle"></i> Estado Entregas</button>
-                <button class="btn-glass" onclick="toggleConfig()"><i class="fas fa-sliders-h"></i> Configurar</button>
-                <button class="btn-glass" onclick="abrirModalKml()"><i class="fas fa-exchange-alt"></i>
-                    Importar/Exportar KML</button>
-                <a href="https://www.google.com/maps/d/viewer?mid=1QD8ZONKwo2HGKci8IL_QoxaHPZf2tkI" target="_blank"
-                    class="btn-glass"><i class="fas fa-globe-americas"></i> Ver Mapa</a>
-                <button class="btn-glass btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i>
-                    Salir</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="main-container">
-        <div class="card-glass fade-in">
-            <div class="controls-row">
-                <div class="control-group" style="flex:2;">
-                    <label><i class="fas fa-search"></i> Buscar cliente</label>
-                    <input type="text" id="buscador" class="control-input" placeholder="Escribí el nombre...">
-                </div>
-                <div class="control-group" style="max-width:180px;">
-                    <label><i class="fas fa-tags"></i> Categoría</label>
-                    <select id="filtroCategoria" class="control-input" onchange="aplicarFiltros()">
-                        <option value="todas">Todas las categorías</option>
-                        <option value="minorista/gastronómico">Minorista / Gastronómico</option>
-                        <option value="supermercado">Supermercado</option>
-                        <option value="mayorista / distribuidor">Mayorista / Distribuidor</option>
-                    </select>
-                </div>
-                <div class="control-group" style="max-width:180px;">
-                    <label><i class="fas fa-sort"></i> Ordenar</label>
-                    <select id="ordenClientes" class="control-input" onchange="aplicarFiltros()">
-                        <option value="abc">A - Z</option>
-                        <option value="reciente">Recién agregado</option>
-                    </select>
-                </div>
-            </div>
-            <div class="controls-row" style="margin-top: 15px; align-items: center;">
-                <div class="control-group" style="max-width:180px; margin-bottom: 0;">
-                    <label><i class="fas fa-truck"></i> Móviles</label>
-                    <input type="number" id="numMoviles" value="3" min="1" max="20" class="control-input">
-                </div>
-                <div style="flex: 1;"></div>
-                <button id="btnGenerar" class="btn-primary" onclick="generarRutas()" style="padding:10px 20px;">
-                    <i class="fas fa-route"></i> Generar Rutas
-                </button>
-            </div>
-        </div>
-
-        <div id="panelConfig" style="display:none;">
-            <div class="card-glass" style="border-left:4px solid var(--accent-gold);">
-                <div style="display:flex; justify-content:space-between;">
-                    <h3><i class="fas fa-cog"></i> Ajustes</h3>
-                    <label class="theme-switch">
-                        <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(!this.checked)">
-                        <span class="slider">
-                            <span class="star star_1"></span>
-                            <span class="star star_2"></span>
-                            <span class="star star_3"></span>
-                            <svg viewBox="0 0 100 100" class="cloud">
-                                <path fill="#fff" d="M30 65 Q30 50 45 50 Q45 35 60 35 Q75 35 75 50 Q90 50 90 65 Z"></path>
-                            </svg>
-                        </span>
-                    </label>
-                </div>
-                <hr style="margin:12px 0; border-color:var(--border-light);">
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px;">
-                    <div>
-                        <label>🚀 Prioridad</label>
-                        <select id="prioridadTipo" class="control-input">
-                            <option value="ninguna">Sin prioridad</option>
-                            <option value="supermercado">Supermercados primero</option>
-                            <option value="mayorista / distribuidor">Mayoristas primero</option>
-                            <option value="minorista/gastronómico">Minoristas primero</option>
-                        </select>
-                </div>
-                <div>
-                    <label>📍 Punto de inicio (Google Maps URL)</label>
-                    <input type="url" id="puntoInicio" class="control-input" placeholder="https://maps.google.com/?q=lat,lon">
-                </div>
-                </div>
-                <div style="margin-top:20px; display:flex; gap:12px;">
-                    <button class="btn-secondary-outline" onclick="window.location.href='reglas.html'">Gestionar reglas avanzadas</button>
-                    <button class="btn-primary" onclick="abrirModalTransportes()" style="padding:10px 20px;"><i class="fas fa-truck-pickup"></i> Gestión de Transportes</button>
-                    <button class="btn-secondary-outline" onclick="abrirModalRutas()" style="padding:10px 20px;"><i class="fas fa-route"></i> Editar Rutas Generadas</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="table-wrapper fade-in">
             <table class="client-table">
                 <thead>
                     <tr>
@@ -1024,7 +933,6 @@
         let clientesFiltrados = [];
         let gruposAbiertos = new Set();
         let kmzPlacemarks = [];
-        let rutas = [];
 
         async function fetchWithAuth(url, options = {}) {
             const token = localStorage.getItem('nexo_token');
