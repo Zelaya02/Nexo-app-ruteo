@@ -995,7 +995,6 @@
             });
             individuales.forEach(c => html += renderFila(c));
             tbody.innerHTML = html;
-            actualizarContador();
         }
 
         function renderFila(c) {
@@ -1022,27 +1021,18 @@
                 const c = clientes.find(cl => cl.id === id);
                 if (c) el.checked = c.seleccionado;
             });
-            actualizarContador();
         }
 
         function toggleCliente(id) {
             let c = clientes.find(c => c.id === id);
             if (c) c.seleccionado = !c.seleccionado;
-            actualizarContador();
         }
 
         function seleccionarTodos(val) {
             clientes.forEach(c => c.seleccionado = val);
             document.querySelectorAll('.checkbox-cliente').forEach(el => el.checked = val);
-            actualizarContador();
         }
         function toggleAll() { seleccionarTodos(document.getElementById('checkboxTodo').checked); }
-        function actualizarContador() {
-            const sel = clientes.filter(c => c.seleccionado).length;
-            const elSel = document.getElementById('seleccionados');
-            const elTotal = document.getElementById('totalClientes');
-            if (elSel) elSel.innerText = sel;
-            if (elTotal) elTotal.innerText = clientes.length + ' total';
         }
         function escapeHtml(t) { if (!t) return ''; const div = document.createElement('div'); div.textContent = t; return div.innerHTML; }
 
@@ -1377,25 +1367,12 @@
 
         // ================= GESTION DE RUTAS (EDICION Y FINALIZACION) =================
         function abrirModalRutas() {
-            document.getElementById('modalRutas').style.display = 'flex';
+document.getElementById('modalRutas').style.display = 'flex';
             cargarTodasLasRutas();
         }
         function cerrarModalRutas() {
             document.getElementById('modalRutas').style.display = 'none';
         }
-        function abrirModalImportarRutas() {
-            document.getElementById('modalImportarRutas').style.display = 'flex';
-        }
-        function cerrarModalImportarRutas() {
-            document.getElementById('modalImportarRutas').style.display = 'none';
-        }
-        function abrirModalCrearRuta() {
-            document.getElementById('modalCrearRuta').style.display = 'flex';
-        }
-        function cerrarModalCrearRuta() {
-            document.getElementById('modalCrearRuta').style.display = 'none';
-        }
-
         function cambiarTabRutas(tab) {
             document.getElementById('panelRutasPendientes').style.display = tab === 'pendientes' ? 'block' : 'none';
             document.getElementById('panelRutasFinalizadas').style.display = tab === 'finalizadas' ? 'block' : 'none';
