@@ -672,7 +672,91 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="btn-glass" onclick="window.location.href='estadisticas.html'"><i
+                <button class="btn-glass" onclick="window.location.href='estadisticas.html'"><i class="fas fa-chart-bar"></i> Estadísticas</button>
+                <button class="btn-glass" onclick="abrirModalKml()"><i class="fas fa-upload"></i> Importar / KML</button>
+                <button class="btn-glass" onclick="exportarKml()"><i class="fas fa-download"></i> Exportar / KML</button>
+                <button class="btn-glass" onclick="toggleConfig()"><i class="fas fa-cog"></i> Configuración</button>
+                <button class="btn-glass" onclick="logout()" style="color:var(--danger); border-color:var(--danger);"><i class="fas fa-sign-out-alt"></i> Salir</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Panel Configuración -->
+        <div id="panelConfig" style="display:none; background:var(--card-light); border-radius:24px; padding:24px; margin-bottom:24px; border:var(--card-border); box-shadow:var(--card-shadow);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border-light); padding-bottom:15px;">
+                <h3 style="margin:0;"><i class="fas fa-sliders-h" style="color:var(--accent-gold);"></i> Configuración de Ruteo</h3>
+                <button class="btn-icon" onclick="toggleConfig()"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:20px;">
+                <div>
+                    <label style="font-size:12px; font-weight:600;"><i class="fas fa-map-marker-alt" style="color:var(--accent-gold);"></i> Link de Google Maps de inicio</label>
+                    <input type="text" id="puntoInicio" class="control-input" placeholder="Ej: https://maps.app.goo.gl/..." style="width:100%;">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:600;"><i class="fas fa-star" style="color:var(--accent-gold);"></i> Prioridad de Ruteo</label>
+                    <select id="prioridadTipo" class="control-input" style="width:100%;">
+                        <option value="ninguna">Ninguna - Ruta más óptima</option>
+                        <option value="supermercado">Supermercados primero</option>
+                        <option value="mayorista / distribuidor">Mayoristas primero</option>
+                        <option value="minorista/gastronómico">Minoristas primero</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:600;"><i class="fas fa-moon" style="color:var(--accent-gold);"></i> Modo Oscuro</label><br>
+                    <div style="margin-top:10px;">
+                        <label class="theme-switch">
+                            <input type="checkbox" id="darkModeToggle" onclick="toggleDarkMode(this.checked)">
+                            <div class="slider"></div>
+                        </label>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:flex-end; gap:10px;">
+                    <button class="btn-secondary-outline" onclick="abrirModalTransportes()" style="width:100%;"><i class="fas fa-truck"></i> Transportes (Choferes/Vehículos)</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div style="position:relative; flex:1;">
+                <i class="fas fa-search" style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-muted-light);"></i>
+                <input type="text" id="buscador" class="control-input" placeholder="Buscar cliente por nombre o cadena..." style="padding-left:45px; width:100%;">
+            </div>
+            
+            <select id="filtroCategoria" class="control-input" onchange="aplicarFiltros()">
+                <option value="todas">Todas las categorías</option>
+                <option value="supermercado">Supermercados</option>
+                <option value="mayorista / distribuidor">Mayoristas</option>
+                <option value="minorista/gastronómico">Minoristas</option>
+            </select>
+            
+            <select id="ordenClientes" class="control-input" onchange="aplicarFiltros()">
+                <option value="recientes">Más recientes primero</option>
+                <option value="abc">Orden alfabético (A-Z)</option>
+            </select>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
+            <div style="display:flex; gap:15px; align-items:center;">
+                <div class="counter-card" style="min-width:auto; padding:8px 15px;">
+                    <div style="font-size:11px; color:var(--text-muted-light); font-weight:600; text-transform:uppercase;">Móviles requeridos</div>
+                    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:5px;">
+                        <input type="number" id="numMoviles" class="control-input" value="1" min="1" max="20" style="width:70px; text-align:center; padding:5px; font-size:18px; font-weight:bold;">
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:12px;">
+                <button class="btn-secondary-outline" onclick="abrirModalRutas()">
+                    <i class="fas fa-route"></i> Ver Rutas
+                </button>
+                <button class="btn-primary" onclick="generarRutas()" id="btnGenerar">
+                    <i class="fas fa-magic"></i> Generar Rutas
+                </button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
             <table class="client-table">
                 <thead>
                     <tr>
@@ -1541,9 +1625,14 @@ document.getElementById('modalRutas').style.display = 'flex';
             if (overlay) overlay.classList.remove('active');
         }
 
-        document.getElementById('buscador').addEventListener('input', () => aplicarFiltros());
-        cargarClientes();
-        cargarRutas();
+        document.addEventListener('DOMContentLoaded', () => {
+            const buscador = document.getElementById('buscador');
+            if (buscador) {
+                buscador.addEventListener('input', () => aplicarFiltros());
+            }
+            cargarClientes();
+            cargarRutas();
+        });
     </script>
 
     <!-- PANTALLA DE CARGA GENERAL (CELESTE & DORADO GLASS CON CAMIÓN ANIMADO) -->
