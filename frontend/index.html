@@ -8,6 +8,9 @@
         if (!localStorage.getItem('nexo_token')) {
             window.location.href = 'login.html';
         }
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.documentElement.classList.add('dark-mode');
+        }
     </script>
     <title>NEXO - Panel de Control</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -524,7 +527,67 @@
             }
         }
 
-        /* Switch personalizado */
+        /* Switch de tabla / clientes */
+        .switch {
+            --circle-dim: 1.1em;
+            font-size: 13px;
+            position: relative;
+            display: inline-block;
+            width: 2.8em;
+            height: 1.6em;
+            vertical-align: middle;
+            margin: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(120, 130, 150, 0.4);
+            transition: background-color .25s ease;
+            border-radius: 30px;
+        }
+
+        .switch .slider-card {
+            position: absolute;
+            height: var(--circle-dim);
+            width: var(--circle-dim);
+            border-radius: 50%;
+            left: 0.25em;
+            bottom: 0.25em;
+            background-color: #FFFFFF;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transition: transform .25s ease, background-color .25s ease;
+            pointer-events: none;
+            transform: translateX(0);
+        }
+
+        .switch input:checked ~ .slider {
+            background-color: var(--primary-main);
+        }
+
+        .switch input:checked ~ .slider-card {
+            transform: translateX(1.2em);
+            background-color: #FFFFFF;
+        }
+
+        body.dark-mode .switch .slider {
+            background-color: #2A2D38;
+        }
+        body.dark-mode .switch input:checked ~ .slider {
+            background-color: var(--primary-main);
+        }
+
+        /* Switch temático de configuración */
         .theme-switch {
             font-size: 14px;
             position: relative;
@@ -564,88 +627,11 @@
             box-shadow: inset 8px -4px 0px 0px #fff;
         }
         .theme-switch input:checked + .slider {
-            background-color: #00a6ff;
+            background-color: var(--primary-main);
         }
         .theme-switch input:checked + .slider:before {
             transform: translateX(1.8em);
             box-shadow: inset 15px -4px 0px 15px #ffcf48;
-        }
-        .theme-switch .star {
-            background-color: #fff;
-            border-radius: 50%;
-            position: absolute;
-            width: 5px;
-            transition: all 0.4s;
-            height: 5px;
-        }
-        .theme-switch .star_1 { left: 2.5em; top: 0.5em; }
-        .theme-switch .star_2 { left: 2.2em; top: 1.2em; }
-        .theme-switch .star_3 { left: 3em; top: 0.9em; }
-        .theme-switch input:checked ~ .slider .star { opacity: 0; }
-        .theme-switch .cloud {
-            width: 3.5em;
-            position: absolute;
-            bottom: -1.4em;
-            left: -1.1em;
-            opacity: 0;
-            transition: all 0.4s;
-        }
-        .theme-switch input:checked ~ .slider .cloud { opacity: 1; }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #555;
-            transition: background-color .3s;
-            border-radius: 30px;
-        }
-
-        .slider-card {
-            position: absolute;
-            height: var(--circle-dim);
-            width: var(--circle-dim);
-            border-radius: 50%;
-            left: 0.3em;
-            bottom: 0.3em;
-            background-color: #000;
-            transition: transform .3s, background-color .3s;
-            pointer-events: none;
-            transform: translateX(0);
-        }
-
-        input:checked~.slider {
-            background-color: #b3e5fc;
-        }
-
-        input:checked~.slider-card {
-            transform: translateX(1.2em);
-            background-color: #4FC3F7;
-        }
-
-        /* Mejorar el contraste del texto de las etiquetas de los switches */
-        label {
-            color: var(--text-light);
-            font-weight: 500;
-        }
-
-        /* Switch pequeño */
-        .switch {
-            --circle-dim: 1em;
-            font-size: 12px;
-            position: relative;
-            display: inline-block;
-            width: 2.8em;
-            height: 1.5em;
         }
 
         @media (max-width: 768px) {
@@ -655,6 +641,11 @@
 
             .controls-row {
                 flex-direction: column;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
             }
         }
     </style>
@@ -672,6 +663,7 @@
                 </div>
             </div>
             <div class="header-actions">
+                <button class="theme-btn-toggle" onclick="toggleThemeQuick()" title="Alternar Modo Oscuro/Claro"><i class="fas fa-moon" id="headerThemeIcon"></i></button>
                 <button class="btn-glass" onclick="window.location.href='estadisticas.html'"><i class="fas fa-chart-bar"></i> Estadísticas</button>
                 <button class="btn-glass" onclick="abrirModalKml()"><i class="fas fa-upload"></i> Importar / KML</button>
                 <button class="btn-glass" onclick="exportarKml()"><i class="fas fa-download"></i> Exportar / KML</button>
@@ -1167,13 +1159,40 @@
         document.getElementById('prioridadTipo').value = savedPrioridad;
     }
 }
-        function toggleDarkMode(isDark) { if (isDark) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled'); }
-        if (localStorage.getItem('darkMode') === 'enabled') { 
-            document.body.classList.add('dark-mode'); 
-            if (document.getElementById('darkModeToggle')) document.getElementById('darkModeToggle').checked = false; 
-        } else {
-            if (document.getElementById('darkModeToggle')) document.getElementById('darkModeToggle').checked = true; 
+        function toggleDarkMode(isDark) {
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.documentElement.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'disabled');
+            }
+            syncThemeUI(isDark);
         }
+
+        function toggleThemeQuick() {
+            const isDark = !document.body.classList.contains('dark-mode');
+            toggleDarkMode(isDark);
+        }
+
+        function syncThemeUI(isDark) {
+            const toggle = document.getElementById('darkModeToggle');
+            if (toggle) toggle.checked = isDark;
+            const icon = document.getElementById('headerThemeIcon');
+            if (icon) {
+                icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+
+        // Initialize Theme on Page Load
+        const isDarkModeActive = localStorage.getItem('darkMode') === 'enabled';
+        if (isDarkModeActive) {
+            document.body.classList.add('dark-mode');
+            document.documentElement.classList.add('dark-mode');
+        }
+        syncThemeUI(isDarkModeActive);
 
         function abrirModalCliente() { document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-plus"></i> Añadir Cliente'; document.getElementById('clienteId').value = ''; document.getElementById('formCliente').reset(); document.getElementById('modalCliente').style.display = 'flex'; }
         function cerrarModalCliente() { document.getElementById('modalCliente').style.display = 'none'; }

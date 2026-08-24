@@ -8,6 +8,9 @@
         if (!localStorage.getItem('nexo_token')) {
             window.location.href = 'login.html';
         }
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.documentElement.classList.add('dark-mode');
+        }
     </script>
     <title>NEXO - Gestión de Rutas | Dashboard Inteligente</title>
     <link
@@ -259,7 +262,7 @@
 
         .cliente-card {
             background: var(--bg-light);
-            padding: 14px;
+            padding: 14px 46px 14px 14px;
             border-radius: 20px;
             margin-bottom: 12px;
             border: 1px solid var(--border-light);
@@ -454,9 +457,12 @@
             <h1><i class="fas fa-truck-fast" style="color: #F5B041; margin-right: 8px;"></i> NEXO · Gestión de Rutas
             </h1>
         </div>
-        <button class="btn-close-glass" onclick="window.close()">
-            <i class="fas fa-times"></i> Cerrar
-        </button>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <button class="theme-btn-toggle" onclick="toggleTheme()" title="Alternar Tema"><i class="fas fa-moon" id="themeIcon"></i></button>
+            <button class="btn-close-glass" onclick="window.close()">
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+        </div>
     </div>
 
     <div class="container">
@@ -818,10 +824,32 @@
         }
 
         // ========== DARK MODE ==========
-        (function initDarkMode() {
-            if (localStorage.getItem('darkMode') === 'enabled') {
+        function syncThemeUI(isDark) {
+            const icon = document.getElementById('themeIcon');
+            if (icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        function toggleTheme() {
+            const isDark = !document.body.classList.contains('dark-mode');
+            if (isDark) {
                 document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.documentElement.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'disabled');
             }
+            syncThemeUI(isDark);
+        }
+
+        (function initDarkMode() {
+            const isDark = localStorage.getItem('darkMode') === 'enabled';
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+            }
+            syncThemeUI(isDark);
         })();
 
         // ========== INICIO ==========

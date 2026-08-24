@@ -8,6 +8,9 @@
         if (!localStorage.getItem('nexo_token')) {
             window.location.href = 'login.html';
         }
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.documentElement.classList.add('dark-mode');
+        }
     </script>
     <title>NEXO | Dashboard de Entregas</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap"
@@ -384,10 +387,10 @@
         </div>
         <div class="header-controls">
             <select id="selectPeriodo" class="period-select" onchange="onPeriodoChange()">
-                <option value="dia" style="color: black;">📆 Hoy</option>
-                <option value="semana" style="color: black;">📊 Últimos 7 días</option>
-                <option value="mes" style="color: black;">📈 Último mes</option>
-                <option value="especifico" style="color: black;">🎯 Día específico</option>
+                <option value="dia">📆 Hoy</option>
+                <option value="semana">📊 Últimos 7 días</option>
+                <option value="mes">📈 Último mes</option>
+                <option value="especifico">🎯 Día específico</option>
             </select>
             <div id="containerFecha" style="display: none;">
                 <input type="date" id="inputFecha" class="date-picker" onchange="cargarDatos()">
@@ -395,6 +398,7 @@
                     <i class="fas fa-eye"></i> Ver ruta
                 </button>
             </div>
+            <button class="theme-btn-toggle" onclick="toggleTheme()" title="Alternar Tema"><i class="fas fa-moon" id="themeIcon"></i></button>
             <button class="btn-glass" onclick="window.location.href='index.html'">
                 <i class="fas fa-arrow-left"></i> Volver
             </button>
@@ -529,9 +533,35 @@
         resetTimer();
 
         // ========== MODO OSCURO ==========
-        if (localStorage.getItem('darkMode') === 'enabled') {
-            document.body.classList.add('dark-mode');
+        let lastStatsData = null;
+        function syncThemeUI(isDark) {
+            const icon = document.getElementById('themeIcon');
+            if (icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
         }
+
+        function toggleTheme() {
+            const isDark = !document.body.classList.contains('dark-mode');
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.documentElement.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'disabled');
+            }
+            syncThemeUI(isDark);
+            if (lastStatsData) renderDashboard(lastStatsData);
+        }
+
+        (function initDarkMode() {
+            const isDark = localStorage.getItem('darkMode') === 'enabled';
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+            }
+            syncThemeUI(isDark);
+        })();
 
         // ========== VARIABLES GLOBALES ==========
         let chartEstados = null;
@@ -571,6 +601,7 @@
                 const stats = await resStats.json();
                 const reportes = await resReportes.json();
 
+                lastStatsData = stats;
                 renderDashboard(stats);
                 renderReportes(reportes);
             } catch (error) {
@@ -582,6 +613,11 @@
         }
 
         function renderDashboard(data) {
+            const isDark = document.body.classList.contains('dark-mode');
+            const textColor = isDark ? '#F2F4F8' : '#1A1D23';
+            const textMuted = isDark ? '#9AA0AE' : '#7C8290';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+
             // KPI
             document.getElementById('totalEntregas').innerText = data.total_entregas ?? 0;
             document.getElementById('totalEntregados').innerText = data.entregados ?? 0;
@@ -607,8 +643,8 @@
                     maintainAspectRatio: false,
                     cutout: '70%',
                     plugins: {
-                        legend: { position: 'bottom', labels: { font: { size: 12 }, usePointStyle: true } },
-                        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw / (data.entregados + data.rechazados + data.pendientes) * 100)}%)` } }
+                        legend: { position: 'bottom', labels: { color: textColor, font: { size: 12 }, usePointStyle: true } },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw / ((data.entregados + data.rechazados + data.pendientes) || 1) * 100)}%)` } }
                     }
                 }
             });
@@ -626,7 +662,7 @@
                         label: 'Entregas exitosas',
                         data: entregasDiarias,
                         borderColor: '#5B6BFF',
-                        backgroundColor: 'rgba(91, 107, 255, 0.08)',
+                        backgroundColor: 'rgba(91, 107, 255, 0.12)',
                         borderWidth: 2.5,
                         pointRadius: 3,
                         pointBackgroundColor: '#5B6BFF',
@@ -638,7 +674,17 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false }, tooltip: { mode: 'index' } },
-                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: gridColor },
+                            ticks: { color: textMuted }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textMuted }
+                        }
+                    }
                 }
             });
 
