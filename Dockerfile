@@ -1,5 +1,5 @@
 # Stage 1: Build the Java backend using Maven
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /build
 
 # Copy the pom.xml and source code
@@ -11,7 +11,7 @@ WORKDIR /build/backend
 RUN mvn clean package -DskipTests
 
 # Stage 2: Create the execution environment
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Copy the compiled fat jar from Stage 1
