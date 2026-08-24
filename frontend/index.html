@@ -246,6 +246,131 @@
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
         }
 
+        /* Toolbar / Controls Bar Unificada */
+        .toolbar-card {
+            background: var(--card-light);
+            border: var(--card-border);
+            border-radius: 20px;
+            padding: 10px 16px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: all 0.25s ease;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1 1 240px;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-box .search-icon {
+            position: absolute;
+            left: 14px;
+            color: var(--text-muted-light);
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 9px 14px 9px 36px;
+            border: 1.5px solid var(--border-light);
+            border-radius: 12px;
+            font-size: 13.5px;
+            background: var(--input-bg);
+            color: var(--text-light);
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-main);
+            background: var(--input-focus-bg);
+            box-shadow: 0 0 0 3px rgba(91, 107, 255, 0.15);
+        }
+
+        .filters-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .select-filter {
+            padding: 9px 30px 9px 12px;
+            border: 1.5px solid var(--border-light);
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            background: var(--input-bg);
+            color: var(--text-light);
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%239AA0AE' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.293a1 1 0 0 0 1.506 0L13 5.732a1 1 0 1 0-1.506-1.464L8 9.568 3.754 5.268a1 1 0 1 0-1.506 1.464l5.247 5.561z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            transition: all 0.2s;
+        }
+
+        .select-filter:focus {
+            border-color: var(--primary-main);
+            background-color: var(--input-focus-bg);
+            box-shadow: 0 0 0 3px rgba(91, 107, 255, 0.15);
+        }
+
+        .select-filter option {
+            background: var(--card-light);
+            color: var(--text-light);
+        }
+
+        .actions-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .moviles-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--counter-bg);
+            border: var(--counter-border);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted-light);
+            height: 38px;
+        }
+
+        .moviles-input {
+            width: 44px;
+            text-align: center;
+            border: 1.5px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            background: var(--card-light);
+            color: var(--primary-main);
+            padding: 3px;
+            outline: none;
+        }
+
+        .moviles-input:focus {
+            border-color: var(--primary-main);
+        }
+
         .controls-row {
             display: flex;
             flex-wrap: wrap;
@@ -663,7 +788,10 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="theme-btn-toggle" onclick="toggleThemeQuick()" title="Alternar Modo Oscuro/Claro"><i class="fas fa-moon" id="headerThemeIcon"></i></button>
+                <label class="theme-switch" title="Alternar Modo Oscuro / Claro">
+                    <input type="checkbox" id="headerDarkModeToggle" onchange="toggleDarkMode(this.checked)">
+                    <div class="slider"></div>
+                </label>
                 <button class="btn-glass" onclick="window.location.href='estadisticas.html'"><i class="fas fa-chart-bar"></i> Estadísticas</button>
                 <button class="btn-glass" onclick="abrirModalKml()"><i class="fas fa-upload"></i> Importar / KML</button>
                 <button class="btn-glass" onclick="exportarKml()"><i class="fas fa-download"></i> Exportar / KML</button>
@@ -709,40 +837,37 @@
             </div>
         </div>
 
-        <div class="controls-row">
-            <div style="position:relative; flex:1;">
-                <i class="fas fa-search" style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-muted-light);"></i>
-                <input type="text" id="buscador" class="control-input" placeholder="Buscar cliente por nombre o cadena..." style="padding-left:45px; width:100%;">
+        <div class="toolbar-card">
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="buscador" class="search-input" placeholder="Buscar cliente por nombre o cadena..." oninput="aplicarFiltros()">
             </div>
             
-            <select id="filtroCategoria" class="control-input" onchange="aplicarFiltros()">
-                <option value="todas">Todas las categorías</option>
-                <option value="supermercado">Supermercados</option>
-                <option value="mayorista / distribuidor">Mayoristas</option>
-                <option value="minorista/gastronómico">Minoristas</option>
-            </select>
-            
-            <select id="ordenClientes" class="control-input" onchange="aplicarFiltros()">
-                <option value="recientes">Más recientes primero</option>
-                <option value="abc">Orden alfabético (A-Z)</option>
-            </select>
-        </div>
+            <div class="filters-group">
+                <select id="filtroCategoria" class="select-filter" onchange="aplicarFiltros()">
+                    <option value="todas">Todas las categorías</option>
+                    <option value="supermercado">Supermercados</option>
+                    <option value="mayorista / distribuidor">Mayoristas</option>
+                    <option value="minorista/gastronómico">Minoristas</option>
+                </select>
+                
+                <select id="ordenClientes" class="select-filter" onchange="aplicarFiltros()">
+                    <option value="recientes">Más recientes primero</option>
+                    <option value="abc">Orden alfabético (A-Z)</option>
+                </select>
+            </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
-            <div style="display:flex; gap:15px; align-items:center;">
-                <div class="counter-card" style="min-width:auto; padding:8px 15px;">
-                    <div style="font-size:11px; color:var(--text-muted-light); font-weight:600; text-transform:uppercase;">Móviles requeridos</div>
-                    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:5px;">
-                        <input type="number" id="numMoviles" class="control-input" value="1" min="1" max="20" style="width:70px; text-align:center; padding:5px; font-size:18px; font-weight:bold;">
-                    </div>
+            <div class="actions-group">
+                <div class="moviles-pill" title="Móviles requeridos">
+                    <i class="fas fa-truck" style="color:var(--primary-main);"></i>
+                    <span class="moviles-label">Móviles:</span>
+                    <input type="number" id="numMoviles" class="moviles-input" value="1" min="1" max="20">
                 </div>
-            </div>
-            
-            <div style="display:flex; gap:12px;">
-                <button class="btn-secondary-outline" onclick="abrirModalRutas()">
+                
+                <button class="btn-secondary-outline" onclick="abrirModalRutas()" style="height:38px; padding:8px 16px; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
                     <i class="fas fa-route"></i> Ver Rutas
                 </button>
-                <button class="btn-primary" onclick="generarRutas()" id="btnGenerar">
+                <button class="btn-primary" onclick="generarRutas()" id="btnGenerar" style="height:38px; padding:8px 18px; font-size:13px; font-weight:600;">
                     <i class="fas fa-magic"></i> Generar Rutas
                 </button>
             </div>
@@ -1180,10 +1305,8 @@
         function syncThemeUI(isDark) {
             const toggle = document.getElementById('darkModeToggle');
             if (toggle) toggle.checked = isDark;
-            const icon = document.getElementById('headerThemeIcon');
-            if (icon) {
-                icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-            }
+            const headerToggle = document.getElementById('headerDarkModeToggle');
+            if (headerToggle) headerToggle.checked = isDark;
         }
 
         // Initialize Theme on Page Load
