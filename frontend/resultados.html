@@ -458,7 +458,10 @@
             </h1>
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
-            <button class="theme-btn-toggle" onclick="toggleTheme()" title="Alternar Tema"><i class="fas fa-moon" id="themeIcon"></i></button>
+            <label class="theme-switch" title="Alternar Modo Oscuro / Claro">
+                <input type="checkbox" id="headerDarkModeToggle" onchange="toggleTheme(this.checked)">
+                <div class="slider"></div>
+            </label>
             <button class="btn-close-glass" onclick="window.close()">
                 <i class="fas fa-times"></i> Cerrar
             </button>
@@ -825,12 +828,12 @@
 
         // ========== DARK MODE ==========
         function syncThemeUI(isDark) {
-            const icon = document.getElementById('themeIcon');
-            if (icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            const toggle = document.getElementById('headerDarkModeToggle');
+            if (toggle) toggle.checked = isDark;
         }
 
-        function toggleTheme() {
-            const isDark = !document.body.classList.contains('dark-mode');
+        function toggleTheme(isDark) {
+            if (isDark === undefined) isDark = !document.body.classList.contains('dark-mode');
             if (isDark) {
                 document.body.classList.add('dark-mode');
                 document.documentElement.classList.add('dark-mode');

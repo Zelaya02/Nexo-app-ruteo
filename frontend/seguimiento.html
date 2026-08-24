@@ -212,7 +212,10 @@
     <div class="header">
         <h1><i class="fas fa-map-marked-alt"></i> Estado de Entregas</h1>
         <div style="display:flex; gap:10px; align-items:center;">
-            <button class="theme-btn-toggle" onclick="toggleTheme()" title="Alternar Tema"><i class="fas fa-moon" id="themeIcon"></i></button>
+            <label class="theme-switch" title="Alternar Modo Oscuro / Claro">
+                <input type="checkbox" id="headerDarkModeToggle" onchange="toggleTheme(this.checked)">
+                <div class="slider"></div>
+            </label>
             <input type="date" id="inputFecha" onchange="cargarDatos()" style="padding:8px; border-radius:8px; border:none; background:rgba(255,255,255,0.1); color:white; color-scheme: dark;">
             <a href="index.html" class="btn-back"><i class="fas fa-arrow-left"></i> Volver</a>
         </div>
@@ -265,12 +268,12 @@
 
         // Initialize Dark Mode from localStorage
         function syncThemeUI(isDark) {
-            const icon = document.getElementById('themeIcon');
-            if (icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            const toggle = document.getElementById('headerDarkModeToggle');
+            if (toggle) toggle.checked = isDark;
         }
 
-        function toggleTheme() {
-            const isDark = !document.body.classList.contains('dark-mode');
+        function toggleTheme(isDark) {
+            if (isDark === undefined) isDark = !document.body.classList.contains('dark-mode');
             if (isDark) {
                 document.body.classList.add('dark-mode');
                 document.documentElement.classList.add('dark-mode');
