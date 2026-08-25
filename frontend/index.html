@@ -712,7 +712,7 @@
             background-color: var(--primary-main);
         }
 
-        /* Switch temático de configuración */
+        /* Switch temático de configuración: Izquierda = Oscuro (Luna), Derecha = Claro (Sol) */
         .theme-switch {
             font-size: 14px;
             position: relative;
@@ -720,7 +720,9 @@
             width: 4em;
             height: 2.2em;
             border-radius: 30px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            vertical-align: middle;
         }
         .theme-switch input {
             opacity: 0;
@@ -734,29 +736,34 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #2a2a2a;
-            transition: 0.4s;
+            background-color: #141824;
+            transition: all 0.35s ease;
             border-radius: 30px;
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
+        /* Izquierda: Modo Oscuro (Luna) */
         .theme-switch .slider:before {
             position: absolute;
             content: "";
-            height: 1.2em;
-            width: 1.2em;
-            border-radius: 20px;
-            left: 0.5em;
-            bottom: 0.5em;
-            transition: 0.4s;
-            transition-timing-function: cubic-bezier(0.81, -0.04, 0.38, 1.5);
-            box-shadow: inset 8px -4px 0px 0px #fff;
+            height: 1.25em;
+            width: 1.25em;
+            border-radius: 50%;
+            left: 0.45em;
+            bottom: 0.42em;
+            transition: all 0.35s cubic-bezier(0.81, -0.04, 0.38, 1.4);
+            background-color: transparent !important;
+            box-shadow: inset 8px -4px 0px 0px #FFD23F !important;
         }
+        /* Derecha: Modo Claro (Sol) */
         .theme-switch input:checked + .slider {
-            background-color: var(--primary-main);
+            background-color: #4A59E6;
+            border-color: rgba(255, 255, 255, 0.25);
         }
         .theme-switch input:checked + .slider:before {
             transform: translateX(1.8em);
-            box-shadow: inset 15px -4px 0px 15px #ffcf48;
+            background-color: #FFD23F !important;
+            box-shadow: 0 0 8px rgba(255, 210, 63, 0.9) !important;
         }
 
         @media (max-width: 768px) {
@@ -819,10 +826,10 @@
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:12px; font-weight:600;"><i class="fas fa-moon" style="color:var(--accent-gold);"></i> Modo Oscuro</label><br>
+                    <label style="font-size:12px; font-weight:600;"><i class="fas fa-adjust" style="color:var(--accent-gold);"></i> Tema (Oscuro / Claro)</label><br>
                     <div style="margin-top:10px;">
-                        <label class="theme-switch">
-                            <input type="checkbox" id="darkModeToggle" onclick="toggleDarkMode(this.checked)">
+                        <label class="theme-switch" title="Izquierda: Oscuro | Derecha: Claro">
+                            <input type="checkbox" id="darkModeToggle" onclick="toggleDarkMode(!this.checked)">
                             <div class="slider"></div>
                         </label>
                     </div>
@@ -1300,9 +1307,9 @@
 
         function syncThemeUI(isDark) {
             const toggle = document.getElementById('darkModeToggle');
-            if (toggle) toggle.checked = isDark;
+            if (toggle) toggle.checked = !isDark;
             const headerToggle = document.getElementById('headerDarkModeToggle');
-            if (headerToggle) headerToggle.checked = isDark;
+            if (headerToggle) headerToggle.checked = !isDark;
         }
 
         // Initialize Theme on Page Load

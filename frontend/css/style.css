@@ -144,35 +144,37 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    background: #4A59E6;
-    transition: 0.35s ease;
+    background-color: #141824;
+    transition: all 0.35s ease;
     border-radius: 30px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+/* Izquierda: Modo Oscuro (Luna) */
 .theme-switch .slider:before {
     position: absolute;
     content: "";
     height: 1.25em;
     width: 1.25em;
     border-radius: 50%;
-    left: 0.4em;
-    bottom: 0.35em;
-    transition: 0.35s cubic-bezier(0.81, -0.04, 0.38, 1.4);
-    background: #FFD23F;
-    box-shadow: 0 0 6px rgba(255, 210, 63, 0.9);
+    left: 0.45em;
+    bottom: 0.42em;
+    transition: all 0.35s cubic-bezier(0.81, -0.04, 0.38, 1.4);
+    background-color: transparent !important;
+    box-shadow: inset 8px -4px 0px 0px #FFD23F !important;
 }
 
+/* Derecha: Modo Claro (Sol) */
 .theme-switch input:checked + .slider {
-    background: #14161F;
-    border-color: rgba(255, 255, 255, 0.15);
+    background-color: #4A59E6;
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .theme-switch input:checked + .slider:before {
-    transform: translateX(1.75em);
-    background: transparent;
-    box-shadow: inset 6px -3px 0px 0px #F5D547;
+    transform: translateX(1.8em);
+    background-color: #FFD23F !important;
+    box-shadow: 0 0 8px rgba(255, 210, 63, 0.9) !important;
 }
 
 /* =========================================================
