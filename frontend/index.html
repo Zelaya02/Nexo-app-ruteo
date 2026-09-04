@@ -866,6 +866,10 @@
                     <span class="moviles-label">Móviles:</span>
                     <input type="number" id="numMoviles" class="moviles-input" value="1" min="1" max="20">
                 </div>
+
+                <button class="btn-secondary-outline" onclick="abrirModalAgrupar()" style="height:38px; padding:8px 16px; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px;" title="Crear carpetas de clientes">
+                    <i class="fas fa-folder-plus"></i> Agrupar
+                </button>
                 
                 <button class="btn-secondary-outline" onclick="abrirModalRutas()" style="height:38px; padding:8px 16px; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
                     <i class="fas fa-route"></i> Ver Rutas
@@ -951,19 +955,27 @@
             <h2 id="modalTitulo"><i class="fas fa-user-plus"></i> Añadir Cliente</h2>
             <form id="formCliente" onsubmit="guardarCliente(event)">
                 <input type="hidden" id="clienteId">
-                <div style="margin-bottom:15px;"><label>Nombre</label><input type="text" id="clienteNombre"
-                        class="control-input" required></div>
-                <div style="margin-bottom:15px;"><label>Tipo</label><select id="clienteTipo" class="control-input">
-                        <option value="minorista/gastronómico">Minorista</option>
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase; letter-spacing:0.3px;">Nombre</label>
+                    <input type="text" id="clienteNombre" class="control-input" required style="width:100%; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase; letter-spacing:0.3px;">Tipo de Cliente</label>
+                    <select id="clienteTipo" class="control-input" style="width:100%; box-sizing:border-box;">
+                        <option value="minorista/gastronómico">Minorista / Gastronómico</option>
                         <option value="supermercado">Supermercado</option>
-                        <option value="mayorista / distribuidor">Mayorista</option>
-                    </select></div>
-                <div style="margin-bottom:20px;"><label>URL Google Maps</label><input type="url" id="clienteUrl"
-                        class="control-input" placeholder="https://..."><small
-                        style="color:var(--text-muted-light);">Extraerá coordenadas</small></div>
-                <div style="display:flex; gap:12px; justify-content:flex-end;"><button type="button"
-                        class="btn-secondary-outline" onclick="cerrarModalCliente()">Cancelar</button><button
-                        type="submit" class="btn-primary">Guardar</button></div>
+                        <option value="mayorista / distribuidor">Mayorista / Distribuidor</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase; letter-spacing:0.3px;">URL Google Maps</label>
+                    <input type="url" id="clienteUrl" class="control-input" placeholder="https://maps.google.com/..." style="width:100%; box-sizing:border-box;">
+                    <small style="display:block; margin-top:5px; color:var(--text-muted-light); font-size:11px;"><i class="fas fa-info-circle"></i> Se extraerán las coordenadas automáticamente</small>
+                </div>
+                <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
+                    <button type="button" class="btn-secondary-outline" onclick="cerrarModalCliente()"><i class="fas fa-times"></i> Cancelar</button>
+                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                </div>
             </form>
         </div>
     </div>
@@ -1158,6 +1170,64 @@
         </div>
     </div>
 
+    <!-- MODAL AGRUPAR CLIENTES -->
+    <div id="modalAgrupar" class="modal-overlay">
+        <div class="modal-container" style="max-width:640px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2><i class="fas fa-folder-plus" style="color:var(--primary-main);"></i> Agrupar Clientes en Carpetas</h2>
+                <button class="btn-icon" onclick="cerrarModalAgrupar()"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display:flex; gap:8px; margin-bottom:20px; background:var(--input-bg); padding:4px; border-radius:14px;">
+                <button id="tabUbicacion" onclick="cambiarTabAgrupar('ubicacion')" style="flex:1; padding:9px; border:none; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; background:var(--primary-main); color:white; transition:all 0.2s;">
+                    <i class="fas fa-map-marker-alt"></i> Por Ubicación Similar
+                </button>
+                <button id="tabPalabra" onclick="cambiarTabAgrupar('palabra')" style="flex:1; padding:9px; border:none; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:var(--text-muted-light); transition:all 0.2s;">
+                    <i class="fas fa-tag"></i> Por Palabra Clave
+                </button>
+            </div>
+
+            <!-- Panel Ubicacion -->
+            <div id="panelAgruparUbicacion">
+                <p style="font-size:13px; color:var(--text-muted-light); margin-bottom:16px;"><i class="fas fa-info-circle"></i> Agrupa automáticamente clientes que están dentro de un radio de distancia definido.</p>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase;">Radio de agrupación (km)</label>
+                    <input type="number" id="radioAgrupacion" class="control-input" value="2" min="0.1" max="50" step="0.1" style="width:100%; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase;">Nombre del grupo (opcional)</label>
+                    <input type="text" id="nombreGrupoUbicacion" class="control-input" placeholder="Ej: Zona Norte, Centro..." style="width:100%; box-sizing:border-box;">
+                </div>
+                <button class="btn-primary" onclick="agruparPorUbicacion()" style="width:100%; justify-content:center;">
+                    <i class="fas fa-layer-group"></i> Detectar y Crear Grupos por Proximidad
+                </button>
+                <div id="resultadoUbicacion" style="margin-top:16px;"></div>
+            </div>
+
+            <!-- Panel Palabra Clave -->
+            <div id="panelAgruparPalabra" style="display:none;">
+                <p style="font-size:13px; color:var(--text-muted-light); margin-bottom:16px;"><i class="fas fa-info-circle"></i> Agrupa todos los clientes cuyo nombre contenga una palabra clave específica.</p>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase;">Palabra clave</label>
+                    <input type="text" id="palabraClave" class="control-input" placeholder="Ej: Superseis, Stock, Mercado..." style="width:100%; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase;">Nombre del grupo</label>
+                    <input type="text" id="nombreGrupoPalabra" class="control-input" placeholder="Ej: Cadena Superseis" style="width:100%; box-sizing:border-box;">
+                </div>
+                <button class="btn-primary" onclick="agruparPorPalabraClave()" style="width:100%; justify-content:center;">
+                    <i class="fas fa-search"></i> Buscar y Crear Grupo
+                </button>
+                <div id="resultadoPalabra" style="margin-top:16px;"></div>
+            </div>
+
+            <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border-light); display:flex; justify-content:flex-end;">
+                <button class="btn-secondary-outline" onclick="cerrarModalAgrupar()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ========== VARIABLES GLOBALES ==========
         let clientes = [];
@@ -1240,6 +1310,98 @@
                 .then(() => alert('URL (' + url + ') copiada al portapapeles'))
                 .catch(() => window.prompt('Copia esta URL manualmente:', url)); 
         }
+
+        // =================== MODAL AGRUPAR ===================
+        function abrirModalAgrupar() {
+            document.getElementById('modalAgrupar').style.display = 'flex';
+            document.getElementById('resultadoUbicacion').innerHTML = '';
+            document.getElementById('resultadoPalabra').innerHTML = '';
+        }
+        function cerrarModalAgrupar() {
+            document.getElementById('modalAgrupar').style.display = 'none';
+        }
+        function cambiarTabAgrupar(tab) {
+            const esUbi = tab === 'ubicacion';
+            document.getElementById('panelAgruparUbicacion').style.display = esUbi ? 'block' : 'none';
+            document.getElementById('panelAgruparPalabra').style.display = esUbi ? 'none' : 'block';
+            document.getElementById('tabUbicacion').style.background = esUbi ? 'var(--primary-main)' : 'transparent';
+            document.getElementById('tabUbicacion').style.color = esUbi ? 'white' : 'var(--text-muted-light)';
+            document.getElementById('tabPalabra').style.background = esUbi ? 'transparent' : 'var(--primary-main)';
+            document.getElementById('tabPalabra').style.color = esUbi ? 'var(--text-muted-light)' : 'white';
+        }
+
+        // Haversine distance in km
+        function distanciaKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function agruparPorUbicacion() {
+            const radio = parseFloat(document.getElementById('radioAgrupacion').value) || 2;
+            const nombreBase = document.getElementById('nombreGrupoUbicacion').value.trim();
+            const conCoordenadas = clientes.filter(c => c.latitud && c.longitud);
+            if (conCoordenadas.length < 2) {
+                document.getElementById('resultadoUbicacion').innerHTML = `<p style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> No hay suficientes clientes con coordenadas (mínimo 2).</p>`;
+                return;
+            }
+            // Clustering simple: greedy
+            const asignados = new Set();
+            const grupos = [];
+            for (let i = 0; i < conCoordenadas.length; i++) {
+                if (asignados.has(i)) continue;
+                const grupo = [conCoordenadas[i]];
+                asignados.add(i);
+                for (let j = i + 1; j < conCoordenadas.length; j++) {
+                    if (asignados.has(j)) continue;
+                    const d = distanciaKm(conCoordenadas[i].latitud, conCoordenadas[i].longitud, conCoordenadas[j].latitud, conCoordenadas[j].longitud);
+                    if (d <= radio) { grupo.push(conCoordenadas[j]); asignados.add(j); }
+                }
+                if (grupo.length > 1) grupos.push(grupo);
+            }
+            if (grupos.length === 0) {
+                document.getElementById('resultadoUbicacion').innerHTML = `<p style="color:var(--warning);"><i class="fas fa-info-circle"></i> No se encontraron clientes dentro del radio de <strong>${radio} km</strong>. Probá con un radio mayor.</p>`;
+                return;
+            }
+            // Apply as cadena grouping locally
+            grupos.forEach((grupo, idx) => {
+                const nombreGrupo = nombreBase ? `${nombreBase} ${idx+1}` : `Zona ${idx+1}`;
+                grupo.forEach(c => { c.cadena = nombreGrupo; });
+            });
+            aplicarFiltros();
+            const resEl = document.getElementById('resultadoUbicacion');
+            resEl.innerHTML = `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); border-radius:12px; padding:14px;">
+                <p style="color:var(--success); font-weight:600; margin-bottom:8px;"><i class="fas fa-check-circle"></i> ${grupos.length} grupo(s) creado(s):</p>
+                ${grupos.map((g, i) => `<p style="font-size:13px; margin:3px 0;">📁 <strong>${nombreBase ? nombreBase + ' ' + (i+1) : 'Zona ' + (i+1)}</strong> — ${g.length} clientes</p>`).join('')}
+                <p style="font-size:11px; color:var(--text-muted-light); margin-top:8px;"><i class="fas fa-info-circle"></i> Los grupos son temporales. Para hacerlos permanentes, edita la cadena de cada cliente.</p>
+            </div>`;
+        }
+
+        function agruparPorPalabraClave() {
+            const palabra = document.getElementById('palabraClave').value.trim().toLowerCase();
+            const nombreGrupo = document.getElementById('nombreGrupoPalabra').value.trim();
+            if (!palabra) {
+                document.getElementById('resultadoPalabra').innerHTML = `<p style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Ingresá una palabra clave.</p>`;
+                return;
+            }
+            const encontrados = clientes.filter(c => c.nombre.toLowerCase().includes(palabra));
+            if (encontrados.length === 0) {
+                document.getElementById('resultadoPalabra').innerHTML = `<p style="color:var(--warning);"><i class="fas fa-info-circle"></i> No se encontraron clientes con "<strong>${escapeHtml(palabra)}</strong>".</p>`;
+                return;
+            }
+            const cadena = nombreGrupo || palabra;
+            encontrados.forEach(c => { c.cadena = cadena; });
+            aplicarFiltros();
+            document.getElementById('resultadoPalabra').innerHTML = `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); border-radius:12px; padding:14px;">
+                <p style="color:var(--success); font-weight:600; margin-bottom:8px;"><i class="fas fa-check-circle"></i> Grupo creado correctamente:</p>
+                <p style="font-size:13px;">📁 <strong>${escapeHtml(cadena)}</strong> — ${encontrados.length} clientes agrupados</p>
+                <ul style="font-size:12px; color:var(--text-muted-light); margin:8px 0 0 16px;">${encontrados.map(c => `<li>${escapeHtml(c.nombre)}</li>`).join('')}</ul>
+                <p style="font-size:11px; color:var(--text-muted-light); margin-top:8px;"><i class="fas fa-info-circle"></i> Los grupos son temporales. Para hacerlos permanentes, edita la cadena de cada cliente.</p>
+            </div>`;
+        }
+        // =================== FIN AGRUPAR ===================
 
         function registrarToggle(nom, abierto) { abierto ? gruposAbiertos.add(nom) : gruposAbiertos.delete(nom); }
         function toggleGrupo(nom, sel) {
