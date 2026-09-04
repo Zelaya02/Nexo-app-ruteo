@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <script>
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.documentElement.classList.add('dark-mode');
+        }
+    </script>
+    <title>NEXO - Mi Ruta de Entregas</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-dark: #4A59E6;
+            --primary: #5B6BFF;
+            --secondary: #3DD7E5;
+            --secondary-dark: #2BC0D0;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --bg-light: #E2E6EE;
+            --card-white: #FFFFFF;
+            --text-dark: #111827;
+            --text-muted: #4B5563;
+            --border-light: #CBD1DC;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.07);
+            --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+            --transition: all 0.25s ease;
+        }
+
+        body.dark-mode {
+            --bg-light: #0A0B0F;
+            --card-white: #14151C;
+            --text-dark: #F2F4F8;
+            --text-muted: #9AA0AE;
+            --border-light: #2A2D38;
+            --shadow-sm: 0 1px 0 rgba(255,255,255,0.02) inset, 0 1px 2px rgba(0,0,0,0.4);
+            --shadow-md: 0 8px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.03) inset;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            transition: var(--transition);
+            padding-bottom: 30px;
+        }
+
+        /* Header moderno */
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            padding: 20px 20px 16px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000 !important;
+        }
+
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: var(--secondary);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.3px;
+        }
+
+        .header p {
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 6px 14px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .banner-finalizada {
+            background: linear-gradient(135deg, var(--danger), #c0392b);
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 0 0 20px 20px;
+            margin-top: 8px;
+        }
+
+        /* Contenedor principal */
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 16px;
+        }
+
+        /* Tarjeta de resumen */
+        .resumen-card {
+            background: var(--card-white);
+            border-radius: 28px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-around;
+            transition: var(--transition);
+        }
+
+        .resumen-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .resumen-item i {
+            font-size: 28px;
+            color: var(--secondary);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .resumen-item .value {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .resumen-item .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Mapa */
+        .map-wrapper {
+            border-radius: 28px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-light);
+        }
+
+        #map {
+            height: 260px;
+            width: 100%;
+            background: #ccc;
+        }
+
+        /* Lista de clientes */
+        .clientes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .cliente-card {
+            background: var(--card-white);
+            border-radius: 24px;
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            transition: var(--transition);
+            animation: fadeSlideUp 0.3s ease;
+        }
+
+        .cliente-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .cliente-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .cliente-numero {
+            background: var(--primary);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .cliente-info {
+            flex: 1;
+        }
+
+        .cliente-info h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .cliente-info .distancia {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Botones de estado */
+        .estado-botones {
+            display: flex;
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .btn-estado {
+            flex: 1;
+            padding: 8px 0;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1.5px solid transparent;
+            background: var(--bg-light);
+            color: var(--text-muted);
+        }
+
+        .btn-estado.pendiente {
+            border-color: #95A5A6;
+        }
+
+        .btn-estado.entregado {
+            border-color: var(--success);
+        }
+
+        .btn-estado.rechazado {
+            border-color: var(--danger);
+        }
+
+        .btn-estado.activo {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-estado.entregado.activo {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .btn-estado.rechazado.activo {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .observacion {
+            width: 100%;
+            padding: 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            background: var(--bg-light);
+            font-family: 'Inter', monospace;
+            font-size: 13px;
+            resize: vertical;
+            margin: 10px 0;
+            transition: var(--transition);
+        }
+
+        .observacion:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 2px rgba(245, 176, 65, 0.2);
+        }
+
+        .btn-guardar {
+            width: 100%;
+            padding: 12px;
+            background: var(--secondary);
+            border: none;
+            border-radius: 40px;
+            font-weight: 800;
+            color: var(--primary-dark);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-guardar:hover {
+            background: var(--secondary-dark);
+            transform: scale(1.02);
+        }
+
+        .btn-finalizar {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            border-radius: 40px;
+            font-weight: 800;
+            font-size: 16px;
+            color: white;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .btn-finalizar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(26, 75, 95, 0.3);
+        }
+
+        /* Loader */
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 15px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .truck-loader {
+            font-size: 50px;
+            animation: truckMove 1s ease infinite;
+        }
+
+        @keyframes truckMove {
+            0% {
+                transform: translateX(0);
+            }
+
+            50% {
+                transform: translateX(10px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 550px) {
+            .resumen-item i {
+                font-size: 22px;
+            }
+
+            .resumen-item .value {
+                font-size: 18px;
+            }
+
+            .btn-estado {
+                font-size: 10px;
+                padding: 6px 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="globalLoader" class="loader-overlay" style="display: none;">
+        <div class="truck-loader"><i class="fas fa-truck-fast"></i></div>
+        <div>Cargando tu ruta...</div>
+    </div>
+
+    <div class="header">
+        <div class="header-content">
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fas fa-truck"></i></div>
+                <h1>NEXO · Mi Ruta</h1>
+            </div>
+            <p id="movilLabel" style="margin:0;">Móvil cargando...</p>
+        </div>
+        <div id="bannerFinalizada" class="banner-finalizada" style="display: none;">
+            <i class="fas fa-lock"></i> RUTA FINALIZADA - SOLO LECTURA
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="resumen-card" id="resumenRuta">
+            <div class="resumen-item">
+                <i class="fas fa-route"></i>
+                <div class="value" id="distTotal">0</div>
+                <div class="label">km totales</div>
+            </div>
+            <div class="resumen-item">
+                <i class="fas fa-clock"></i>
+                <div class="value" id="tiempoEst">0</div>
+                <div class="label">min estimados</div>
+            </div>
+            <div class="resumen-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <div class="value" id="cantClientes">0</div>
+                <div class="label">paradas</div>
+            </div>
+        </div>
+
+        <div class="map-wrapper">
+            <div id="map"></div>
+        </div>
+
+        <div id="listaClientes" class="clientes-list">
+            <div style="text-align:center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+        </div>
+
+        <button id="btnFinalizarRuta" class="btn-finalizar" onclick="finalizarRuta()">
+            <i class="fas fa-flag-checkered"></i> ENVIAR REPORTE FINAL Y CERRAR
+        </button>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // ========== OBTENER TOKEN ==========
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        let mapInstance = null;
+        let rutaData = null;
+
+        if (!token) {
+            document.body.innerHTML = '<div style="text-align:center; padding:50px; font-size:20px; color:red;">❌ Token no válido</div>';
+        } else {
+            cargarRuta();
+        }
+
+        // ========== FUNCIÓN PARA MOSTRAR/OCULTAR LOADER ==========
+        function showLoader(show) {
+            const loader = document.getElementById('globalLoader');
+            if (show) {
+                loader.style.display = 'flex';
+                loader.style.opacity = '1';
+            } else {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 300);
+            }
+        }
+
+        // ========== CARGAR RUTA DESDE BACKEND ==========
+        async function cargarRuta() {
+            showLoader(true);
+            try {
+                const baseUrl = window.location.port === '5500' ? 'http://localhost:8080' : '';
+                const response = await fetch(`${baseUrl}/api/ruta?token=${token}`);
+                if (!response.ok) throw new Error('Error al cargar los datos');
+                rutaData = await response.json();
+
+                // Actualizar interfaz
+                document.getElementById('movilLabel').innerHTML = `<i class="fas fa-truck"></i> Móvil ${rutaData.movil}`;
+                document.getElementById('distTotal').innerText = rutaData.distancia_total || 0;
+                document.getElementById('tiempoEst').innerText = rutaData.tiempo_estimado || 0;
+                document.getElementById('cantClientes').innerText = rutaData.clientes.length;
+
+                if (rutaData.finalizada) {
+                    document.getElementById('bannerFinalizada').style.display = 'block';
+                    document.getElementById('btnFinalizarRuta').style.display = 'none';
+                }
+
+                renderMap(rutaData.clientes);
+                renderClientes(rutaData.clientes, rutaData.finalizada);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('listaClientes').innerHTML = `<div style="text-align:center; color:red; padding:20px;">❌ Error al cargar la ruta. Verifica tu conexión.</div>`;
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        // ========== RENDER MAPA CON LEAFLET ==========
+        function renderMap(clientes) {
+            if (!clientes.length) return;
+            const primerPunto = [clientes[0].latitud, clientes[0].longitud];
+            if (mapInstance) mapInstance.remove();
+            mapInstance = L.map('map').setView(primerPunto, 13);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> & CartoDB',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(mapInstance);
+
+            const puntos = [];
+            clientes.forEach((c, i) => {
+                const latlng = [c.latitud, c.longitud];
+                puntos.push(latlng);
+                const estadoIcon = c.estado === 'entregado' ? '✅' : (c.estado === 'rechazado' ? '❌' : '🕒');
+                const marker = L.marker(latlng).addTo(mapInstance);
+                marker.bindPopup(`
+                    <b>${i + 1}. ${escapeHtml(c.nombre)}</b><br>
+                    <span style="font-size:12px;">Estado: ${estadoIcon} ${c.estado.toUpperCase()}</span>
+                `);
+            });
+
+            // Dibujar ruta optimizada
+            const polyline = L.polyline(puntos, { color: '#F5B041', weight: 5, opacity: 0.8 }).addTo(mapInstance);
+            mapInstance.fitBounds(polyline.getBounds());
+        }
+
+        // ========== RENDER LISTA DE CLIENTES ==========
+        function renderClientes(clientes, finalizada) {
+            const container = document.getElementById('listaClientes');
+            container.innerHTML = '';
+            clientes.forEach((c, idx) => {
+                const estadoActivo = c.estado || 'pendiente';
+                const observacion = c.observacion || '';
+                const card = document.createElement('div');
+                card.className = 'cliente-card';
+                card.id = `card-${c.id}`;
+                card.innerHTML = `
+                    <div class="cliente-header">
+                        <div class="cliente-numero">${idx + 1}</div>
+                        <div class="cliente-info">
+                            <h3>${escapeHtml(c.nombre)}</h3>
+                            <div class="distancia"><i class="fas fa-location-arrow"></i> ${c.distancia_siguiente || 0} km al siguiente cliente</div>
+                        </div>
+                    </div>
+                    <div class="estado-botones" ${finalizada ? 'style="pointer-events:none; opacity:0.6;"' : ''}>
+                        <button class="btn-estado pendiente ${estadoActivo === 'pendiente' ? 'activo' : ''}" onclick="setEstado(${c.id}, 'pendiente')">PENDIENTE</button>
+                        <button class="btn-estado entregado ${estadoActivo === 'entregado' ? 'activo' : ''}" onclick="setEstado(${c.id}, 'entregado')">ENTREGADO</button>
+                        <button class="btn-estado rechazado ${estadoActivo === 'rechazado' ? 'activo' : ''}" onclick="setEstado(${c.id}, 'rechazado')">RECHAZADO</button>
+                    </div>
+                    <textarea class="observacion" id="obs-${c.id}" placeholder="Motivo del rechazo o comentario (obligatorio si no es entregado)" ${finalizada ? 'disabled' : ''} rows="2">${escapeHtml(observacion)}</textarea>
+                    ${finalizada ? '' : `<button class="btn-guardar" onclick="guardarEstado(${c.id})"><i class="fas fa-save"></i> Guardar estado</button>`}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function setEstado(clienteId, estado) {
+            const card = document.getElementById(`card-${clienteId}`);
+            if (!card) return;
+            card.querySelectorAll('.btn-estado').forEach(btn => btn.classList.remove('activo'));
+            const targetBtn = card.querySelector(`.btn-estado.${estado}`);
+            if (targetBtn) targetBtn.classList.add('activo');
+        }
+
+        async function guardarEstado(clienteId) {
+            const card = document.getElementById(`card-${clienteId}`);
+            let estado = 'pendiente';
+            if (card.querySelector('.btn-estado.entregado').classList.contains('activo')) estado = 'entregado';
+            if (card.querySelector('.btn-estado.rechazado').classList.contains('activo')) estado = 'rechazado';
+            const observacion = document.getElementById(`obs-${clienteId}`).value.trim();
+
+            if ((estado === 'pendiente' || estado === 'rechazado') && observacion === '') {
+                alert("⚠️ Para marcar como PENDIENTE o RECHAZADO debes escribir un comentario.");
+                return;
+            }
+
+            const btn = card.querySelector('.btn-guardar');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            btn.disabled = true;
+
+            try {
+                const baseUrl = window.location.port === '5500' ? 'http://localhost:8080' : '';
+                const res = await fetch(`${baseUrl}/api/actualizar-estado`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, cliente_id: clienteId, estado, observacion })
+                });
+                if (!res.ok) throw new Error('Error del servidor');
+                btn.innerHTML = '<i class="fas fa-check"></i> Guardado!';
+                btn.style.background = '#27AE60';
+                btn.style.color = 'white';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.disabled = false;
+                }, 2000);
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error al guardar estado');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function finalizarRuta() {
+            if (!confirm("¿Finalizar la jornada? No podrás modificar los estados después.")) return;
+            showLoader(true);
+            try {
+                const baseUrl = window.location.port === '5500' ? 'http://localhost:8080' : '';
+                const res = await fetch(`${baseUrl}/api/finalizar-ruta`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+                if (!res.ok) throw new Error('Error');
+                alert("✅ Ruta finalizada correctamente.");
+                window.location.reload();
+            } catch (error) {
+                alert("❌ Error al finalizar: " + error.message);
+                showLoader(false);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Modo oscuro
+        function syncThemeUI(isDark) {
+            const toggle = document.getElementById('headerDarkModeToggle');
+            if (toggle) toggle.checked = isDark;
+        }
+
+        function toggleTheme(isDark) {
+            if (isDark === undefined) isDark = !document.body.classList.contains('dark-mode');
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.documentElement.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'disabled');
+            }
+            syncThemeUI(isDark);
+        }
+
+        (function () {
+            const isDark = localStorage.getItem('darkMode') === 'enabled';
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
+            }
+            syncThemeUI(isDark);
+        })();
+    </script>
+</body>
+
+</html>

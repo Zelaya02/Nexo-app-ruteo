@@ -1,0 +1,313 @@
+/* =========================================================
+   NEXO - Global Styles, Theme Variables & Component Rules
+   ========================================================= */
+
+:root {
+    color-scheme: light;
+    --primary-dark: #4A59E6;
+    --primary-main: #5B6BFF;
+    --primary-hover: #7886FF;
+    --accent-gold: #5B6BFF;
+    --accent-orange: #5B6BFF;
+    --secondary: #3DD7E5;
+    --secondary-dark: #2BC0D0;
+    --success: #10B981;
+    --danger: #EF4444;
+    --warning: #F59E0B;
+    --bg-light: #E2E6EE;
+    --card-light: #FFFFFF;
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05);
+    --card-border: 1px solid #CBD1DC;
+    --text-light: #111827;
+    --text-muted-light: #4B5563;
+    --border-light: #CBD1DC;
+    --input-bg: #F3F4F8;
+    --input-focus-bg: #FFFFFF;
+    --table-th-bg: #E5E8F0;
+    --summary-bg: #FAFBFF;
+    --summary-hover: #E8ECF5;
+    --summary-border: 1px solid #CBD1DC;
+    --counter-bg: rgba(91, 107, 255, 0.08);
+    --counter-border: 1px solid rgba(91, 107, 255, 0.2);
+}
+
+body.dark-mode {
+    color-scheme: dark;
+    --bg-light: #0A0B0F;
+    --card-light: #14151C;
+    --card-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.03) inset;
+    --card-border: 1px solid #2A2D38;
+    --text-light: #F2F4F8;
+    --text-muted-light: #9AA0AE;
+    --border-light: #2A2D38;
+    --primary-dark: #0A0B0F;
+    --primary-main: #5B6BFF;
+    --primary-hover: #7886FF;
+    --accent-gold: #5B6BFF;
+    --accent-orange: #5B6BFF;
+    --secondary: #3DD7E5;
+    --secondary-dark: #2BC0D0;
+    --success: #2BE08C;
+    --danger: #FF3A5C;
+    --warning: #F5D547;
+    --input-bg: #14151C;
+    --input-focus-bg: #1E2029;
+    --table-th-bg: rgba(255, 255, 255, 0.03);
+    --summary-bg: #14151C;
+    --summary-hover: #1E2029;
+    --summary-border: 1px solid #2A2D38;
+    --counter-bg: rgba(91, 107, 255, 0.08);
+    --counter-border: 1px solid rgba(91, 107, 255, 0.25);
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(150, 150, 160, 0.35);
+    border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(150, 150, 160, 0.6);
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Fix Leaflet Map z-index & Superposition Bugs */
+.leaflet-pane {
+    z-index: 10 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+    z-index: 20 !important;
+}
+
+.leaflet-control {
+    z-index: 20 !important;
+}
+
+.leaflet-popup {
+    z-index: 30 !important;
+}
+
+/* Sticky Header and Modal Stacking Hierarchy */
+.header {
+    z-index: 1000 !important;
+}
+
+.modal-overlay,
+.modal {
+    z-index: 10000 !important;
+}
+
+/* Theme Toggle Switch Style */
+.theme-switch {
+    font-size: 11px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 3.8em;
+    height: 2.1em;
+    border-radius: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    margin: 0 4px;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.theme-switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #141824;
+    transition: all 0.35s ease;
+    border-radius: 30px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Izquierda: Modo Oscuro (Luna) */
+.theme-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 1.25em;
+    width: 1.25em;
+    border-radius: 50%;
+    left: 0.45em;
+    bottom: 0.42em;
+    transition: all 0.35s cubic-bezier(0.81, -0.04, 0.38, 1.4);
+    background-color: transparent !important;
+    box-shadow: inset 8px -4px 0px 0px #FFD23F !important;
+}
+
+/* Derecha: Modo Claro (Sol) */
+.theme-switch input:checked + .slider {
+    background-color: #4A59E6;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.theme-switch input:checked + .slider:before {
+    transform: translateX(1.8em);
+    background-color: #FFD23F !important;
+    box-shadow: 0 0 8px rgba(255, 210, 63, 0.9) !important;
+}
+
+/* =========================================================
+   Animated Truck Loader
+   ========================================================= */
+
+.loader {
+    width: fit-content;
+    height: fit-content;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.truckWrapper {
+    width: 200px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    align-items: center;
+    justify-content: flex-end;
+    overflow-x: hidden;
+}
+
+.truckBody {
+    width: 130px;
+    height: fit-content;
+    margin-bottom: 6px;
+    animation: motion 1s linear infinite;
+}
+
+@keyframes motion {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(3px); }
+    100% { transform: translateY(0px); }
+}
+
+.truckTires {
+    width: 130px;
+    height: fit-content;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0px 10px 0px 15px;
+    position: absolute;
+    bottom: 0;
+}
+
+.truckTires svg {
+    width: 24px;
+}
+
+.road {
+    width: 100%;
+    height: 1.5px;
+    background-color: #282828;
+    position: relative;
+    bottom: 0;
+    align-self: flex-end;
+    border-radius: 3px;
+}
+
+.road::before {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 100%;
+    background-color: #282828;
+    right: -50%;
+    border-radius: 3px;
+    animation: roadAnimation 1.4s linear infinite;
+    border-left: 10px solid white;
+}
+
+.road::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 100%;
+    background-color: #282828;
+    right: -65%;
+    border-radius: 3px;
+    animation: roadAnimation 1.4s linear infinite;
+    border-left: 4px solid white;
+}
+
+.lampPost {
+    position: absolute;
+    bottom: 0;
+    right: -90%;
+    height: 90px;
+    animation: roadAnimation 1.4s linear infinite;
+}
+
+@keyframes roadAnimation {
+    0% { transform: translateX(0px); }
+    100% { transform: translateX(-350px); }
+}
+
+/* Fullscreen loading overlay */
+.loading-overlay, #loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(11, 43, 64, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 99999 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.loading-text {
+    margin-top: 25px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #5B6BFF;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: 0.5px;
+    text-align: center;
+    padding: 0 20px;
+}
