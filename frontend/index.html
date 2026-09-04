@@ -797,6 +797,7 @@
             <div class="header-actions">
                 <button class="btn-glass" onclick="window.location.href='estadisticas.html'"><i class="fas fa-chart-bar"></i> Estadísticas</button>
                 <button class="btn-glass" onclick="abrirModalKml()"><i class="fas fa-upload"></i> Importar / KML</button>
+                <button class="btn-glass" id="btnAdminUsuarios" onclick="window.location.href='admin.html'" style="display:none; color:var(--primary-main); border-color:var(--primary-main);"><i class="fas fa-users-cog"></i> Usuarios</button>
                 <button class="btn-glass" onclick="exportarKml()"><i class="fas fa-download"></i> Exportar / KML</button>
                 <button class="btn-glass" onclick="toggleConfig()"><i class="fas fa-cog"></i> Configuración</button>
                 <button class="btn-glass" onclick="logout()" style="color:var(--danger); border-color:var(--danger);"><i class="fas fa-sign-out-alt"></i> Salir</button>
@@ -1181,10 +1182,13 @@
             <!-- Tabs -->
             <div style="display:flex; gap:8px; margin-bottom:20px; background:var(--input-bg); padding:4px; border-radius:14px;">
                 <button id="tabUbicacion" onclick="cambiarTabAgrupar('ubicacion')" style="flex:1; padding:9px; border:none; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; background:var(--primary-main); color:white; transition:all 0.2s;">
-                    <i class="fas fa-map-marker-alt"></i> Por Ubicación Similar
+                    <i class="fas fa-map-marker-alt"></i> Por Ubicación
                 </button>
                 <button id="tabPalabra" onclick="cambiarTabAgrupar('palabra')" style="flex:1; padding:9px; border:none; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:var(--text-muted-light); transition:all 0.2s;">
                     <i class="fas fa-tag"></i> Por Palabra Clave
+                </button>
+                <button id="tabManual" onclick="cambiarTabAgrupar('manual')" style="flex:1; padding:9px; border:none; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:var(--text-muted-light); transition:all 0.2s;">
+                    <i class="fas fa-hand-pointer"></i> Selección Manual
                 </button>
             </div>
 
@@ -1220,6 +1224,24 @@
                     <i class="fas fa-search"></i> Buscar y Crear Grupo
                 </button>
                 <div id="resultadoPalabra" style="margin-top:16px;"></div>
+            </div>
+
+            <!-- Panel Selección Manual -->
+            <div id="panelAgruparManual" style="display:none;">
+                <p style="font-size:13px; color:var(--text-muted-light); margin-bottom:16px;"><i class="fas fa-info-circle"></i> Selecciona manualmente los clientes que deseas agrupar en una carpeta.</p>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase;">Nombre de la Carpeta / Grupo</label>
+                    <input type="text" id="nombreGrupoManual" class="control-input" placeholder="Ej: Clientes Prioritarios" style="width:100%; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <input type="text" id="filtroManualInput" class="control-input" placeholder="🔍 Buscar cliente en la lista..." oninput="filtrarListaManual()" style="width:100%; box-sizing:border-box; padding:8px 12px; font-size:12px;">
+                </div>
+                <div id="listaClientesManual" style="max-height:220px; overflow-y:auto; border:1px solid var(--border-light); border-radius:12px; padding:8px; margin-bottom:16px; background:rgba(0,0,0,0.02);">
+                </div>
+                <button class="btn-primary" onclick="agruparManualmente()" style="width:100%; justify-content:center;">
+                    <i class="fas fa-folder"></i> Crear Carpeta con Seleccionados
+                </button>
+                <div id="resultadoManual" style="margin-top:16px;"></div>
             </div>
 
             <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border-light); display:flex; justify-content:flex-end;">
@@ -1316,18 +1338,85 @@
             document.getElementById('modalAgrupar').style.display = 'flex';
             document.getElementById('resultadoUbicacion').innerHTML = '';
             document.getElementById('resultadoPalabra').innerHTML = '';
+            document.getElementById('resultadoManual').innerHTML = '';
+            renderizarListaManual();
         }
         function cerrarModalAgrupar() {
             document.getElementById('modalAgrupar').style.display = 'none';
         }
         function cambiarTabAgrupar(tab) {
-            const esUbi = tab === 'ubicacion';
-            document.getElementById('panelAgruparUbicacion').style.display = esUbi ? 'block' : 'none';
-            document.getElementById('panelAgruparPalabra').style.display = esUbi ? 'none' : 'block';
-            document.getElementById('tabUbicacion').style.background = esUbi ? 'var(--primary-main)' : 'transparent';
-            document.getElementById('tabUbicacion').style.color = esUbi ? 'white' : 'var(--text-muted-light)';
-            document.getElementById('tabPalabra').style.background = esUbi ? 'transparent' : 'var(--primary-main)';
-            document.getElementById('tabPalabra').style.color = esUbi ? 'var(--text-muted-light)' : 'white';
+            document.getElementById('panelAgruparUbicacion').style.display = tab === 'ubicacion' ? 'block' : 'none';
+            document.getElementById('panelAgruparPalabra').style.display = tab === 'palabra' ? 'block' : 'none';
+            document.getElementById('panelAgruparManual').style.display = tab === 'manual' ? 'block' : 'none';
+
+            document.getElementById('tabUbicacion').style.background = tab === 'ubicacion' ? 'var(--primary-main)' : 'transparent';
+            document.getElementById('tabUbicacion').style.color = tab === 'ubicacion' ? 'white' : 'var(--text-muted-light)';
+            
+            document.getElementById('tabPalabra').style.background = tab === 'palabra' ? 'var(--primary-main)' : 'transparent';
+            document.getElementById('tabPalabra').style.color = tab === 'palabra' ? 'white' : 'var(--text-muted-light)';
+
+            document.getElementById('tabManual').style.background = tab === 'manual' ? 'var(--primary-main)' : 'transparent';
+            document.getElementById('tabManual').style.color = tab === 'manual' ? 'white' : 'var(--text-muted-light)';
+
+            if (tab === 'manual') {
+                renderizarListaManual();
+            }
+        }
+
+        function renderizarListaManual(filtro = '') {
+            const contenedor = document.getElementById('listaClientesManual');
+            if (!contenedor) return;
+            const term = filtro.toLowerCase().trim();
+            const filtrados = clientes.filter(c => !term || c.nombre.toLowerCase().includes(term) || (c.direccion && c.direccion.toLowerCase().includes(term)));
+            
+            if (filtrados.length === 0) {
+                contenedor.innerHTML = `<p style="font-size:12px; color:var(--text-muted-light); padding:10px; text-align:center;">No se encontraron clientes.</p>`;
+                return;
+            }
+
+            contenedor.innerHTML = filtrados.map(c => `
+                <label style="display:flex; align-items:center; gap:10px; padding:6px 8px; border-bottom:1px solid var(--border-light); cursor:pointer; font-size:13px;">
+                    <input type="checkbox" class="chk-agrupar-manual" value="${c.id}">
+                    <span><strong>${escapeHtml(c.nombre)}</strong> ${c.direccion ? `<small style="color:var(--text-muted-light);">(${escapeHtml(c.direccion)})</small>` : ''}</span>
+                </label>
+            `).join('');
+        }
+
+        function filtrarListaManual() {
+            const val = document.getElementById('filtroManualInput').value;
+            renderizarListaManual(val);
+        }
+
+        function agruparManualmente() {
+            const nombreGrupo = document.getElementById('nombreGrupoManual').value.trim();
+            if (!nombreGrupo) {
+                document.getElementById('resultadoManual').innerHTML = `<p style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Ingresa un nombre para la carpeta/grupo.</p>`;
+                return;
+            }
+
+            const checkboxes = document.querySelectorAll('.chk-agrupar-manual:checked');
+            if (checkboxes.length === 0) {
+                document.getElementById('resultadoManual').innerHTML = `<p style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Selecciona al menos un cliente de la lista.</p>`;
+                return;
+            }
+
+            const idsSeleccionados = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            let count = 0;
+            clientes.forEach(c => {
+                if (idsSeleccionados.includes(c.id)) {
+                    c.cadena = nombreGrupo;
+                    count++;
+                }
+            });
+
+            document.getElementById('resultadoManual').innerHTML = `
+                <div style="background:rgba(46,194,126,0.15); border:1px solid var(--success); color:var(--success); padding:10px; border-radius:10px; font-size:13px; text-align:center;">
+                    <i class="fas fa-check-circle"></i> ${count} cliente(s) agrupados en "<strong>${escapeHtml(nombreGrupo)}</strong>"
+                </div>
+            `;
+
+            gruposAbiertos.add(nombreGrupo);
+            aplicarFiltros();
         }
 
         // Haversine distance in km
@@ -1936,6 +2025,10 @@ document.getElementById('modalRutas').style.display = 'flex';
             const buscador = document.getElementById('buscador');
             if (buscador) {
                 buscador.addEventListener('input', () => aplicarFiltros());
+            }
+            if (localStorage.getItem('nexo_rol') === 'superadmin') {
+                const btnAdmin = document.getElementById('btnAdminUsuarios');
+                if (btnAdmin) btnAdmin.style.display = 'inline-flex';
             }
             cargarClientes();
             cargarRutas();

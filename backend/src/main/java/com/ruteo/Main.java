@@ -48,8 +48,20 @@ public class Main {
         }
     }
 
+    static class UserSession {
+        long creationTime;
+        String username;
+        String rol;
+
+        UserSession(long creationTime, String username, String rol) {
+            this.creationTime = creationTime;
+            this.username = username;
+            this.rol = rol;
+        }
+    }
+
     private static UsuarioRepository usuarioRepo; // se inicializa después de auto-detectar puerto
-    private static final Map<String, Long> activeTokens = new ConcurrentHashMap<>();
+    private static final Map<String, UserSession> activeTokens = new ConcurrentHashMap<>();
     private static final long TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 horas
 
     /** Parsea DATABASE_URL (formato Render o estandar de heroku) a JDBC */
@@ -100,12 +112,18 @@ public class Main {
                     "username TEXT UNIQUE, " +
                     "password TEXT, " +
                     "nombre TEXT, " +
-                    "rol TEXT)");
+                    "rol TEXT, " +
+                    "activo BOOLEAN DEFAULT true)");
+
+            try { stmt.executeUpdate("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS rol TEXT DEFAULT 'admin'"); } catch (SQLException ignored) {}
             
             ResultSet rsAdmin = stmt.executeQuery("SELECT COUNT(*) FROM usuarios WHERE username = 'admin'");
             if (rsAdmin.next() && rsAdmin.getInt(1) == 0) {
-                stmt.executeUpdate("INSERT INTO usuarios (username, password, nombre, rol) VALUES ('admin', 'nexo2025', 'Administrador', 'admin')");
+                stmt.executeUpdate("INSERT INTO usuarios (username, password, nombre, rol, activo) VALUES ('admin', 'nexo2025', 'Administrador', 'superadmin', true)");
                 System.out.println("✅ Usuario administrador por defecto creado (admin/nexo2025).");
+            } else {
+                stmt.executeUpdate("UPDATE usuarios SET rol = 'superadmin', activo = true WHERE username = 'admin'");
             }
             
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS clientes (" +
@@ -278,6 +296,7 @@ public class Main {
         server.createContext("/api/vehiculos", new VehiculosHandler());
         server.createContext("/api/kml/importar", new KmlImportHandler());
         server.createContext("/api/kml/exportar", new KmlExportHandler());
+        server.createContext("/api/admin/usuarios", new AdminUsuariosHandler());
 
         server.setExecutor(null);
         server.start();
@@ -1227,11 +1246,18 @@ String dateFilter = switch (periodo) {
                     Usuario usuario = usuarioRepo.login(username, password);
 
                     if (usuario != null) {
+                        if (!usuario.isActivo()) {
+                            response.put("success", false);
+                            response.put("message", "Usuario desactivado. Contacte a un Administrador.");
+                            sendResponse(exchange, 401, gson.toJson(response));
+                            return;
+                        }
                         String sessionToken = java.util.UUID.randomUUID().toString();
-                        activeTokens.put(sessionToken, System.currentTimeMillis());
+                        activeTokens.put(sessionToken, new UserSession(System.currentTimeMillis(), usuario.getUsername(), usuario.getRol()));
                         response.put("success", true);
                         response.put("message", "Login exitoso");
                         response.put("usuario", usuario.getNombre());
+                        response.put("rol", usuario.getRol() != null ? usuario.getRol() : "admin");
                         response.put("token", sessionToken);
                         response.put("redirect", "index.html");
                         sendResponse(exchange, 200, gson.toJson(response));
@@ -1242,6 +1268,88 @@ String dateFilter = switch (periodo) {
                     }
                 } catch (Exception e) {
                     e.printStackTrace(); sendError(exchange, 500, "Error interno del servidor");
+                }
+            } else {
+                exchange.sendResponseHeaders(405, -1);
+            }
+        }
+    }
+
+    static class AdminUsuariosHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            setCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
+            if (!isSuperAdmin(exchange)) {
+                sendError(exchange, 403, "Acceso denegado. Se requieren permisos de Super Admin.");
+                return;
+            }
+
+            String method = exchange.getRequestMethod();
+
+            if ("GET".equals(method)) {
+                List<Usuario> usuarios = usuarioRepo.listarUsuarios();
+                sendResponse(exchange, 200, gson.toJson(usuarios));
+            } else if ("POST".equals(method)) {
+                try {
+                    String body = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))
+                            .lines().collect(Collectors.joining("\n"));
+                    JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+
+                    String action = json.has("action") ? json.get("action").getAsString() : "";
+                    if ("reset_password".equals(action)) {
+                        int id = json.get("id").getAsInt();
+                        String password = json.get("password").getAsString();
+                        boolean ok = usuarioRepo.resetPassword(id, password);
+                        if (ok) sendResponse(exchange, 200, "{\"status\":\"ok\"}");
+                        else sendError(exchange, 400, "No se pudo cambiar la contraseña");
+                        return;
+                    }
+
+                    String username = json.get("username").getAsString().trim();
+                    String nombre = json.get("nombre").getAsString().trim();
+                    String rol = json.has("rol") ? json.get("rol").getAsString() : "admin";
+                    String password = json.get("password").getAsString().trim();
+
+                    if (username.isEmpty() || password.isEmpty() || nombre.isEmpty()) {
+                        sendError(exchange, 400, "Todos los campos son obligatorios");
+                        return;
+                    }
+
+                    boolean ok = usuarioRepo.crearUsuario(username, nombre, rol, password);
+                    if (ok) {
+                        sendResponse(exchange, 201, "{\"status\":\"created\"}");
+                    } else {
+                        sendError(exchange, 400, "El nombre de usuario ya existe o hubo un error");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    sendError(exchange, 500, "Error procesando la solicitud");
+                }
+            } else if ("PUT".equals(method)) {
+                try {
+                    String body = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))
+                            .lines().collect(Collectors.joining("\n"));
+                    JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+
+                    int id = json.get("id").getAsInt();
+                    String nombre = json.get("nombre").getAsString().trim();
+                    String rol = json.has("rol") ? json.get("rol").getAsString() : "admin";
+                    boolean activo = json.has("activo") ? json.get("activo").getAsBoolean() : true;
+
+                    boolean ok = usuarioRepo.actualizarUsuario(id, nombre, rol, activo);
+                    if (ok) {
+                        sendResponse(exchange, 200, "{\"status\":\"updated\"}");
+                    } else {
+                        sendError(exchange, 400, "Error al actualizar el usuario");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    sendError(exchange, 500, "Error procesando la solicitud");
                 }
             } else {
                 exchange.sendResponseHeaders(405, -1);
@@ -1263,15 +1371,23 @@ String dateFilter = switch (periodo) {
         String authHeader = authHeaders.get(0);
         if (authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7).trim();
-            Long creationTime = activeTokens.get(token);
-            if (creationTime == null) return false;
-            if (System.currentTimeMillis() - creationTime > TOKEN_TTL_MS) {
+            UserSession session = activeTokens.get(token);
+            if (session == null) return false;
+            if (System.currentTimeMillis() - session.creationTime > TOKEN_TTL_MS) {
                 activeTokens.remove(token);
                 return false;
             }
             return true;
         }
         return false;
+    }
+
+    private static boolean isSuperAdmin(HttpExchange exchange) {
+        if (!isAuthorized(exchange)) return false;
+        List<String> authHeaders = exchange.getRequestHeaders().get("Authorization");
+        String token = authHeaders.get(0).substring(7).trim();
+        UserSession session = activeTokens.get(token);
+        return session != null && "superadmin".equalsIgnoreCase(session.rol);
     }
 
     private static void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {

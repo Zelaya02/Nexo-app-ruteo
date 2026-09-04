@@ -398,6 +398,7 @@
                 if (data.success) {
                     localStorage.setItem('nexo_user', data.usuario);
                     localStorage.setItem('nexo_token', data.token);
+                    localStorage.setItem('nexo_rol', data.rol || 'admin');
                     btnText.textContent = 'Acceso concedido';
                     setTimeout(() => {
                         window.location.href = 'index.html';
