@@ -52,11 +52,13 @@ public class Main {
         long creationTime;
         String username;
         String rol;
+        int userId;
 
-        UserSession(long creationTime, String username, String rol) {
+        UserSession(long creationTime, String username, String rol, int userId) {
             this.creationTime = creationTime;
             this.username = username;
             this.rol = rol;
+            this.userId = userId;
         }
     }
 
@@ -120,10 +122,16 @@ public class Main {
             
             ResultSet rsAdmin = stmt.executeQuery("SELECT COUNT(*) FROM usuarios WHERE username = 'admin'");
             if (rsAdmin.next() && rsAdmin.getInt(1) == 0) {
-                stmt.executeUpdate("INSERT INTO usuarios (username, password, nombre, rol, activo) VALUES ('admin', 'nexo2025', 'Administrador', 'superadmin', true)");
+                stmt.executeUpdate("INSERT INTO usuarios (username, password, nombre, rol, activo) VALUES ('admin', 'nexo2025', 'Administrador', 'admin', true)");
                 System.out.println("✅ Usuario administrador por defecto creado (admin/nexo2025).");
             } else {
-                stmt.executeUpdate("UPDATE usuarios SET rol = 'superadmin', activo = true WHERE username = 'admin'");
+                stmt.executeUpdate("UPDATE usuarios SET rol = 'admin', activo = true WHERE username = 'admin'");
+            }
+
+            ResultSet rsSuper = stmt.executeQuery("SELECT COUNT(*) FROM usuarios WHERE username = 'superadmin'");
+            if (rsSuper.next() && rsSuper.getInt(1) == 0) {
+                stmt.executeUpdate("INSERT INTO usuarios (username, password, nombre, rol, activo) VALUES ('superadmin', 'supernexo2025', 'Super Administrador', 'superadmin', true)");
+                System.out.println("✅ Usuario super administrador por defecto creado (superadmin/supernexo2025).");
             }
             
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS clientes (" +
@@ -187,6 +195,13 @@ public class Main {
             try { stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS vehiculo_nombre TEXT"); } catch (SQLException ignored) {}
             try { stmt.executeUpdate("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (SQLException ignored) {}
             try { stmt.executeUpdate("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS url_google TEXT"); } catch (SQLException ignored) {}
+            
+            // Columnas Multi-inquilino
+            try { stmt.executeUpdate("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS usuario_id INTEGER DEFAULT 1"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE choferes ADD COLUMN IF NOT EXISTS usuario_id INTEGER DEFAULT 1"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE vehiculos ADD COLUMN IF NOT EXISTS usuario_id INTEGER DEFAULT 1"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE rutas_generadas ADD COLUMN IF NOT EXISTS usuario_id INTEGER DEFAULT 1"); } catch (SQLException ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE reglas_ruteo ADD COLUMN IF NOT EXISTS usuario_id INTEGER DEFAULT 1"); } catch (SQLException ignored) {}
 
             System.out.println("✅ Esquema de base de datos verificado/creado.");
             
@@ -361,11 +376,18 @@ public class Main {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) {
+                sendError(exchange, 401, "No autorizado");
+                return;
+            }
+
             if ("GET".equals(exchange.getRequestMethod())) {
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                    String sql = "SELECT * FROM clientes WHERE activo = true ORDER BY id DESC";
-                    Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(sql);
+                    String sql = "SELECT * FROM clientes WHERE activo = true AND usuario_id = ? ORDER BY id DESC";
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
 
                     List<Map<String, Object>> clientes = new ArrayList<>();
                     while (rs.next()) {
@@ -412,7 +434,7 @@ public class Main {
 
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
                         if ("POST".equals(exchange.getRequestMethod())) {
-                            String sql = "INSERT INTO clientes (nombre, tipo_cliente, latitud, longitud, ciudad, cadena, activo) VALUES (?, ?, ?, ?, ?, ?, true)";
+                            String sql = "INSERT INTO clientes (nombre, tipo_cliente, latitud, longitud, ciudad, cadena, activo, usuario_id) VALUES (?, ?, ?, ?, ?, ?, true, ?)";
                             PreparedStatement pstmt = conn.prepareStatement(sql);
                             pstmt.setString(1, nombre);
                             pstmt.setString(2, tipo);
@@ -420,11 +442,12 @@ public class Main {
                             pstmt.setDouble(4, lon);
                             pstmt.setString(5, ciudad);
                             pstmt.setString(6, cadena);
+                            pstmt.setInt(7, userId);
                             pstmt.executeUpdate();
                             sendResponse(exchange, 201, "{\"status\":\"created\"}");
                         } else {
                             int id = ((Double) req.get("id")).intValue();
-                            String sql = "UPDATE clientes SET nombre=?, tipo_cliente=?, latitud=?, longitud=?, ciudad=?, cadena=? WHERE id=?";
+                            String sql = "UPDATE clientes SET nombre=?, tipo_cliente=?, latitud=?, longitud=?, ciudad=?, cadena=? WHERE id=? AND usuario_id=?";
                             PreparedStatement pstmt = conn.prepareStatement(sql);
                             pstmt.setString(1, nombre);
                             pstmt.setString(2, tipo);
@@ -433,6 +456,7 @@ public class Main {
                             pstmt.setString(5, ciudad);
                             pstmt.setString(6, cadena);
                             pstmt.setInt(7, id);
+                            pstmt.setInt(8, userId);
                             pstmt.executeUpdate();
                             sendResponse(exchange, 200, "{\"status\":\"updated\"}");
                         }
@@ -451,9 +475,10 @@ public class Main {
                     int id = Integer.parseInt(query.split("id=")[1].split("&")[0]);
 
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "UPDATE clientes SET activo = false WHERE id = ?";
+                        String sql = "UPDATE clientes SET activo = false WHERE id = ? AND usuario_id = ?";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setInt(1, id);
+                        pstmt.setInt(2, userId);
                         pstmt.executeUpdate();
                         sendResponse(exchange, 200, "{\"status\":\"deleted\"}");
                     }
@@ -1253,7 +1278,7 @@ String dateFilter = switch (periodo) {
                             return;
                         }
                         String sessionToken = java.util.UUID.randomUUID().toString();
-                        activeTokens.put(sessionToken, new UserSession(System.currentTimeMillis(), usuario.getUsername(), usuario.getRol()));
+                        activeTokens.put(sessionToken, new UserSession(System.currentTimeMillis(), usuario.getUsername(), usuario.getRol(), usuario.getId()));
                         response.put("success", true);
                         response.put("message", "Login exitoso");
                         response.put("usuario", usuario.getNombre());
@@ -1388,6 +1413,20 @@ String dateFilter = switch (periodo) {
         String token = authHeaders.get(0).substring(7).trim();
         UserSession session = activeTokens.get(token);
         return session != null && "superadmin".equalsIgnoreCase(session.rol);
+    }
+
+    private static Integer getUserIdFromSession(HttpExchange exchange) {
+        List<String> authHeaders = exchange.getRequestHeaders().get("Authorization");
+        if (authHeaders == null || authHeaders.isEmpty()) return null;
+        String authHeader = authHeaders.get(0);
+        if (authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7).trim();
+            UserSession session = activeTokens.get(token);
+            if (session != null) {
+                return session.userId;
+            }
+        }
+        return null;
     }
 
     private static void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {

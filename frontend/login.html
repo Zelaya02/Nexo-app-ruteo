@@ -396,12 +396,17 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    const userRol = data.rol || 'admin';
                     localStorage.setItem('nexo_user', data.usuario);
                     localStorage.setItem('nexo_token', data.token);
-                    localStorage.setItem('nexo_rol', data.rol || 'admin');
+                    localStorage.setItem('nexo_rol', userRol);
                     btnText.textContent = 'Acceso concedido';
                     setTimeout(() => {
-                        window.location.href = 'index.html';
+                        if (userRol === 'superadmin') {
+                            window.location.href = 'admin.html';
+                        } else {
+                            window.location.href = 'index.html';
+                        }
                     }, 600);
                 } else {
                     throw new Error(data.message || 'Credenciales inválidas');
