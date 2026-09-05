@@ -1,6 +1,11 @@
 /* =========================================================
-   NEXO - Global Styles, Theme Variables & Component Rules
-   ========================================================= */
+    NEXO - Global Styles, Theme Variables & Component Rules
+    ========================================================= */
+
+/* Fix box-sizing global para prevenir superposición */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
 
 :root {
     color-scheme: light;

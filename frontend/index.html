@@ -59,6 +59,11 @@
             letter-spacing: 0.5px;
         }
         
+        /* Fix box-sizing globally to prevent overlap issues */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         /* ========== PALETA REFINADA Y ELEGANTE (CELESTE & DORADO) ========== */
         :root {
             --bg-light: #E2E6EE;
@@ -784,6 +789,29 @@
                 width: 100%;
                 justify-content: space-between;
             }
+        }
+
+        /* ========== FIX SUPERPOSICION PANEL CONFIGURACIÓN ========== */
+        #panelConfig {
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            box-sizing: border-box;
+        }
+
+        .toolbar-card {
+            position: relative;
+            z-index: 1;
+            box-sizing: border-box;
+        }
+
+        .main-container {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toolbar-card, .table-wrapper {
+            flex-shrink: 0;
         }
     </style>
 </head>
