@@ -512,6 +512,9 @@ public class Main {
                     Map<String, Object> request = gson.fromJson(body, Map.class);
                     System.out.println("Generando rutas con: " + body);
 
+                    Integer userId = getUserIdFromSession(exchange);
+                    if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
+
                     List<Double> cIds = (List<Double>) request.get("cliente_ids");
                     Object numMovilesObj = request.get("num_moviles");
                     int numMoviles = 1;
@@ -552,9 +555,10 @@ public class Main {
                     Map<String, Integer> reglasActivas = new HashMap<>();
                     if (usarReglas) {
                         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                            String sqlReg = "SELECT categoria, limite_por_movil FROM reglas_ruteo WHERE activo = true";
-                            Statement stmtReg = conn.createStatement();
-                            ResultSet rsReg = stmtReg.executeQuery(sqlReg);
+                            String sqlReg = "SELECT categoria, limite_por_movil FROM reglas_ruteo WHERE activo = true AND usuario_id = ?";
+                            PreparedStatement stmtReg = conn.prepareStatement(sqlReg);
+                            stmtReg.setInt(1, userId);
+                            ResultSet rsReg = stmtReg.executeQuery();
                             while (rsReg.next()) {
                                 reglasActivas.put(rsReg.getString("categoria").toLowerCase(),
                                         rsReg.getInt("limite_por_movil"));
@@ -668,7 +672,7 @@ public class Main {
                             }
 
                             // Insertar ruta
-                            String insertRuta = "INSERT INTO rutas_generadas (token, movil_numero, clientes_json, distancia_total, tiempo_estimado, chofer_id, vehiculo_id, chofer_nombre, vehiculo_nombre) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            String insertRuta = "INSERT INTO rutas_generadas (token, movil_numero, clientes_json, distancia_total, tiempo_estimado, chofer_id, vehiculo_id, chofer_nombre, vehiculo_nombre, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                             PreparedStatement pstmt = conn.prepareStatement(insertRuta);
                             pstmt.setString(1, token);
                             pstmt.setInt(2, i + 1);
@@ -679,6 +683,7 @@ public class Main {
                             if (vehiculoId != null) pstmt.setInt(7, vehiculoId); else pstmt.setNull(7, java.sql.Types.INTEGER);
                             pstmt.setString(8, choferNombre);
                             pstmt.setString(9, vehiculoNombre);
+                            pstmt.setInt(10, userId);
                             pstmt.executeUpdate();
 
                             // Insertar entregas
@@ -854,10 +859,14 @@ public class Main {
                     Map<String, Object> req = gson.fromJson(body, Map.class);
                     String token = (String) req.get("token");
 
+                    Integer userId = getUserIdFromSession(exchange);
+                    if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
+
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "UPDATE rutas_generadas SET estado = 'finalizada' WHERE token = ?";
+                        String sql = "UPDATE rutas_generadas SET estado = 'finalizada' WHERE token = ? AND usuario_id = ?";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setString(1, token);
+                        pstmt.setInt(2, userId);
                         int updated = pstmt.executeUpdate();
                         if (updated > 0) {
                             sendResponse(exchange, 200, "{\"status\":\"ok\"}");
@@ -884,12 +893,15 @@ public class Main {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
                     // Obtener las ultimas 100 rutas generadas
-                    String sql = "SELECT token, movil_numero, clientes_json, distancia_total, chofer_nombre, vehiculo_nombre, fecha, estado FROM rutas_generadas ORDER BY fecha DESC LIMIT 100";
-                    Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(sql);
+                    String sql = "SELECT token, movil_numero, clientes_json, distancia_total, chofer_nombre, vehiculo_nombre, fecha, estado FROM rutas_generadas WHERE usuario_id = ? ORDER BY fecha DESC LIMIT 100";
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
                     List<Map<String, Object>> rutasList = new ArrayList<>();
                     
                     while (rs.next()) {
@@ -935,8 +947,9 @@ public class Main {
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
                         // Verificar antiguedad de la ruta
                         PreparedStatement checkStmt = conn.prepareStatement(
-                            "SELECT fecha FROM rutas_generadas WHERE token = ?");
+                            "SELECT fecha FROM rutas_generadas WHERE token = ? AND usuario_id = ?");
                         checkStmt.setString(1, token);
+                        checkStmt.setInt(2, userId);
                         ResultSet rs = checkStmt.executeQuery();
                         
                         if (!rs.next()) {
@@ -971,8 +984,9 @@ public class Main {
 
                         // Eliminar la ruta
                         PreparedStatement deleteStmt = conn.prepareStatement(
-                            "DELETE FROM rutas_generadas WHERE token = ?");
+                            "DELETE FROM rutas_generadas WHERE token = ? AND usuario_id = ?");
                         deleteStmt.setString(1, token);
+                        deleteStmt.setInt(2, userId);
                         int deleted = deleteStmt.executeUpdate();
                         
                         if (deleted > 0) {
@@ -1002,11 +1016,14 @@ public class Main {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                    String sql = "SELECT * FROM reglas_ruteo ORDER BY categoria";
-                    Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(sql);
+                    String sql = "SELECT * FROM reglas_ruteo WHERE usuario_id = ? ORDER BY categoria";
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
                     List<Regla> reglas = new ArrayList<>();
                     while (rs.next()) {
                         reglas.add(new Regla(rs.getInt("id"), rs.getString("categoria"), rs.getInt("limite_por_movil"),
@@ -1034,14 +1051,25 @@ public class Main {
                                 return;
                             }
 
-                            String sql = "INSERT INTO reglas_ruteo (categoria, limite_por_movil, activo) " +
-                                    "VALUES (?, ?, ?) ON CONFLICT (categoria) " +
-                                    "DO UPDATE SET limite_por_movil = EXCLUDED.limite_por_movil, activo = EXCLUDED.activo";
-                            PreparedStatement pstmt = conn.prepareStatement(sql);
-                            pstmt.setString(1, cat);
-                            pstmt.setInt(2, lim);
-                            pstmt.setBoolean(3, act);
-                            pstmt.executeUpdate();
+                            PreparedStatement checkStmt = conn.prepareStatement("SELECT id FROM reglas_ruteo WHERE categoria = ? AND usuario_id = ?");
+                            checkStmt.setString(1, cat);
+                            checkStmt.setInt(2, userId);
+                            ResultSet rsCheck = checkStmt.executeQuery();
+                            if (rsCheck.next()) {
+                                PreparedStatement updStmt = conn.prepareStatement("UPDATE reglas_ruteo SET limite_por_movil = ?, activo = ? WHERE categoria = ? AND usuario_id = ?");
+                                updStmt.setInt(1, lim);
+                                updStmt.setBoolean(2, act);
+                                updStmt.setString(3, cat);
+                                updStmt.setInt(4, userId);
+                                updStmt.executeUpdate();
+                            } else {
+                                PreparedStatement insStmt = conn.prepareStatement("INSERT INTO reglas_ruteo (categoria, limite_por_movil, activo, usuario_id) VALUES (?, ?, ?, ?)");
+                                insStmt.setString(1, cat);
+                                insStmt.setInt(2, lim);
+                                insStmt.setBoolean(3, act);
+                                insStmt.setInt(4, userId);
+                                insStmt.executeUpdate();
+                            }
                         }
                         sendResponse(exchange, 200, "{\"status\":\"ok\"}");
                     }
@@ -1058,9 +1086,10 @@ public class Main {
                     String cat = java.net.URLDecoder.decode(query.split("categoria=")[1].split("&")[0], "UTF-8")
                             .toLowerCase();
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "DELETE FROM reglas_ruteo WHERE LOWER(categoria) = ?";
+                        String sql = "DELETE FROM reglas_ruteo WHERE LOWER(categoria) = ? AND usuario_id = ?";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setString(1, cat);
+                        pstmt.setInt(2, userId);
                         pstmt.executeUpdate();
                         sendResponse(exchange, 200, "{\"status\":\"deleted\"}");
                     }
@@ -1084,6 +1113,8 @@ public class Main {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 String query = exchange.getRequestURI().getQuery();
                 String periodo = "dia";
@@ -1100,9 +1131,10 @@ String dateFilter = switch (periodo) {
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
                     // Totales por Estado
                     String sql = "SELECT e.estado, COUNT(*) as cantidad FROM entregas e JOIN rutas_generadas r ON e.ruta_token = r.token WHERE "
-                            + dateFilter + " GROUP BY e.estado";
-                    Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(sql);
+                            + dateFilter + " AND r.usuario_id = ? GROUP BY e.estado";
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
 
                     int entregados = 0, pendientes = 0, rechazados = 0;
                     while (rs.next()) {
@@ -1134,9 +1166,11 @@ String dateFilter = switch (periodo) {
                             "JOIN entregas e ON r.token = e.ruta_token " +
                             "LEFT JOIN choferes ch ON r.chofer_id = ch.id " +
                             "LEFT JOIN vehiculos v ON r.vehiculo_id = v.id " +
-                            "WHERE " + dateFilter + " " +
+                            "WHERE " + dateFilter + " AND r.usuario_id = ? " +
                             "GROUP BY r.movil_numero, ch.nombre, v.nombre";
-                    ResultSet rsRend = stmt.executeQuery(sqlRend);
+                    PreparedStatement stmtRend = conn.prepareStatement(sqlRend);
+                    stmtRend.setInt(1, userId);
+                    ResultSet rsRend = stmtRend.executeQuery();
                     List<Map<String, Object>> rendimientos = new ArrayList<>();
                     while (rsRend.next()) {
                         Map<String, Object> rm = new HashMap<>();
@@ -1153,8 +1187,10 @@ String dateFilter = switch (periodo) {
                     String sqlHist = "SELECT CAST(r.fecha AS DATE) as fecha_dia, " +
                             "SUM(CASE WHEN e.estado = 'entregado' THEN 1 ELSE 0 END) as ent " +
                             "FROM rutas_generadas r JOIN entregas e ON r.token = e.ruta_token " +
-                            "WHERE " + dateFilter + " GROUP BY CAST(r.fecha AS DATE) ORDER BY fecha_dia ASC";
-                    ResultSet rsHist = stmt.executeQuery(sqlHist);
+                            "WHERE " + dateFilter + " AND r.usuario_id = ? GROUP BY CAST(r.fecha AS DATE) ORDER BY fecha_dia ASC";
+                    PreparedStatement stmtHist = conn.prepareStatement(sqlHist);
+                    stmtHist.setInt(1, userId);
+                    ResultSet rsHist = stmtHist.executeQuery();
                     List<Map<String, Object>> historial = new ArrayList<>();
                     while (rsHist.next()) {
                         Map<String, Object> h = new HashMap<>();
@@ -1184,6 +1220,8 @@ String dateFilter = switch (periodo) {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
                     String sql = "SELECT e.id, c.nombre as cliente, e.estado, e.observacion, e.fecha_actualizacion, r.movil_numero, "
@@ -1194,10 +1232,11 @@ String dateFilter = switch (periodo) {
                             "JOIN rutas_generadas r ON e.ruta_token = r.token " +
                             "LEFT JOIN choferes ch ON r.chofer_id = ch.id " +
                             "LEFT JOIN vehiculos v ON r.vehiculo_id = v.id " +
-                            "WHERE e.estado != 'pendiente' " +
+                            "WHERE e.estado != 'pendiente' AND r.usuario_id = ? " +
                             "ORDER BY e.fecha_actualizacion DESC LIMIT 50";
-                    Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(sql);
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
 
                     List<Map<String, Object>> reportes = new ArrayList<>();
                     while (rs.next()) {
@@ -1824,11 +1863,14 @@ String dateFilter = switch (periodo) {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                    String sql = "SELECT * FROM choferes WHERE activo = true ORDER BY nombre";
-                    Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(sql);
+                    String sql = "SELECT * FROM choferes WHERE activo = true AND usuario_id = ? ORDER BY nombre";
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
                     List<Map<String, Object>> choferes = new ArrayList<>();
                     while (rs.next()) {
                         Map<String, Object> c = new HashMap<>();
@@ -1850,10 +1892,11 @@ String dateFilter = switch (periodo) {
                     String telefono = (String) req.get("telefono");
 
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "INSERT INTO choferes (nombre, telefono) VALUES (?, ?)";
+                        String sql = "INSERT INTO choferes (nombre, telefono, usuario_id) VALUES (?, ?, ?)";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setString(1, nombre);
                         pstmt.setString(2, telefono);
+                        pstmt.setInt(3, userId);
                         pstmt.executeUpdate();
                         sendResponse(exchange, 201, "{\"status\":\"ok\"}");
                     }
@@ -1865,9 +1908,10 @@ String dateFilter = switch (periodo) {
                     String query = exchange.getRequestURI().getQuery();
                     int id = Integer.parseInt(query.split("id=")[1].split("&")[0]);
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "UPDATE choferes SET activo = false WHERE id = ?";
+                        String sql = "UPDATE choferes SET activo = false WHERE id = ? AND usuario_id = ?";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setInt(1, id);
+                        pstmt.setInt(2, userId);
                         pstmt.executeUpdate();
                         sendResponse(exchange, 200, "{\"status\":\"deleted\"}");
                     }
@@ -1882,11 +1926,12 @@ String dateFilter = switch (periodo) {
                     String nombre = (String) req.get("nombre");
                     String telefono = (String) req.get("telefono");
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "UPDATE choferes SET nombre = ?, telefono = ? WHERE id = ?";
+                        String sql = "UPDATE choferes SET nombre = ?, telefono = ? WHERE id = ? AND usuario_id = ?";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setString(1, nombre);
                         pstmt.setString(2, telefono);
                         pstmt.setInt(3, id);
+                        pstmt.setInt(4, userId);
                         pstmt.executeUpdate();
                         sendResponse(exchange, 200, "{\"status\":\"updated\"}");
                     }
@@ -1911,11 +1956,14 @@ String dateFilter = switch (periodo) {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                    String sql = "SELECT * FROM vehiculos WHERE activo = true ORDER BY nombre";
-                    Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(sql);
+                    String sql = "SELECT * FROM vehiculos WHERE activo = true AND usuario_id = ? ORDER BY nombre";
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
                     List<Map<String, Object>> vehiculos = new ArrayList<>();
                     while (rs.next()) {
                         Map<String, Object> v = new HashMap<>();
@@ -1939,11 +1987,12 @@ String dateFilter = switch (periodo) {
                     String tipo = (String) req.get("tipo");
 
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "INSERT INTO vehiculos (nombre, chapa, tipo) VALUES (?, ?, ?)";
+                        String sql = "INSERT INTO vehiculos (nombre, chapa, tipo, usuario_id) VALUES (?, ?, ?, ?)";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setString(1, nombre);
                         pstmt.setString(2, chapa);
                         pstmt.setString(3, tipo);
+                        pstmt.setInt(4, userId);
                         pstmt.executeUpdate();
                         sendResponse(exchange, 201, "{\"status\":\"ok\"}");
                     }
@@ -1955,9 +2004,10 @@ String dateFilter = switch (periodo) {
                     String query = exchange.getRequestURI().getQuery();
                     int id = Integer.parseInt(query.split("id=")[1].split("&")[0]);
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "UPDATE vehiculos SET activo = false WHERE id = ?";
+                        String sql = "UPDATE vehiculos SET activo = false WHERE id = ? AND usuario_id = ?";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setInt(1, id);
+                        pstmt.setInt(2, userId);
                         pstmt.executeUpdate();
                         sendResponse(exchange, 200, "{\"status\":\"deleted\"}");
                     }
@@ -1973,12 +2023,13 @@ String dateFilter = switch (periodo) {
                     String chapa = (String) req.get("chapa");
                     String tipo = (String) req.get("tipo");
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "UPDATE vehiculos SET nombre = ?, chapa = ?, tipo = ? WHERE id = ?";
+                        String sql = "UPDATE vehiculos SET nombre = ?, chapa = ?, tipo = ? WHERE id = ? AND usuario_id = ?";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         pstmt.setString(1, nombre);
                         pstmt.setString(2, chapa);
                         pstmt.setString(3, tipo);
                         pstmt.setInt(4, id);
+                        pstmt.setInt(5, userId);
                         pstmt.executeUpdate();
                         sendResponse(exchange, 200, "{\"status\":\"updated\"}");
                     }
@@ -2117,6 +2168,8 @@ String dateFilter = switch (periodo) {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
             if ("POST".equals(exchange.getRequestMethod())) {
                 try {
                     String body = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))
@@ -2162,7 +2215,7 @@ String dateFilter = switch (periodo) {
                     List<Map<String, String>> points = parseKml(kml);
 
                     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                        String sql = "INSERT INTO clientes (nombre, latitud, longitud, ciudad, tipo_cliente, activo) VALUES (?, ?, ?, ?, 'General', true)";
+                        String sql = "INSERT INTO clientes (nombre, latitud, longitud, ciudad, tipo_cliente, activo, usuario_id) VALUES (?, ?, ?, ?, 'General', true, ?)";
                         PreparedStatement pstmt = conn.prepareStatement(sql);
                         for (Map<String, String> p : points) {
                             double lat = Double.parseDouble(p.get("lat"));
@@ -2171,6 +2224,7 @@ String dateFilter = switch (periodo) {
                             pstmt.setDouble(2, lat);
                             pstmt.setDouble(3, lon);
                             pstmt.setString(4, determinarCiudad(lat, lon));
+                            pstmt.setInt(5, userId);
                             pstmt.addBatch();
                         }
                         pstmt.executeBatch();
@@ -2223,11 +2277,14 @@ String dateFilter = switch (periodo) {
                 sendError(exchange, 401, "No autorizado");
                 return;
             }
+            Integer userId = getUserIdFromSession(exchange);
+            if (userId == null) { sendError(exchange, 401, "No autorizado"); return; }
             if ("GET".equals(exchange.getRequestMethod())) {
                 try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-                    String sql = "SELECT nombre, latitud, longitud FROM clientes WHERE activo = true";
-                    Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery(sql);
+                    String sql = "SELECT nombre, latitud, longitud FROM clientes WHERE activo = true AND usuario_id = ?";
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setInt(1, userId);
+                    ResultSet rs = stmt.executeQuery();
 
                     StringBuilder kml = new StringBuilder();
                     kml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");

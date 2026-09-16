@@ -1005,6 +1005,13 @@
                     <input type="url" id="clienteUrl" class="control-input" placeholder="https://maps.google.com/..." style="width:100%; box-sizing:border-box;">
                     <small style="display:block; margin-top:5px; color:var(--text-muted-light); font-size:11px;"><i class="fas fa-info-circle"></i> Se extraerán las coordenadas automáticamente</small>
                 </div>
+                <div style="margin-bottom:18px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--text-muted-light); text-transform:uppercase; letter-spacing:0.3px;">Carpeta / Grupo</label>
+                    <select id="clienteCadena" class="control-input" style="width:100%; box-sizing:border-box;">
+                        <option value="NINGUNO">Sin grupo</option>
+                    </select>
+                    <small style="display:block; margin-top:5px; color:var(--text-muted-light); font-size:11px;"><i class="fas fa-info-circle"></i> Seleccioná la carpeta a la que pertenece este cliente</small>
+                </div>
                 <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light);">
                     <button type="button" class="btn-secondary-outline" onclick="cerrarModalCliente()"><i class="fas fa-times"></i> Cancelar</button>
                     <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Guardar</button>
@@ -1326,6 +1333,33 @@
             actualizarTabla();
         }
 
+        function obtenerCadenasExistentes() {
+            const cadenas = new Set();
+            clientes.forEach(c => { if (c.cadena && c.cadena !== 'NINGUNO') cadenas.add(c.cadena); });
+            return [...cadenas].sort();
+        }
+
+        function popularSelectCadena(valorActual) {
+            const sel = document.getElementById('clienteCadena');
+            if (!sel) return;
+            const cadenas = obtenerCadenasExistentes();
+            sel.innerHTML = '<option value="NINGUNO">Sin grupo</option>';
+            cadenas.forEach(cad => {
+                const opt = document.createElement('option');
+                opt.value = cad;
+                opt.textContent = cad;
+                if (valorActual && cad === valorActual) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            if (valorActual && valorActual !== 'NINGUNO' && !cadenas.includes(valorActual)) {
+                const opt = document.createElement('option');
+                opt.value = valorActual;
+                opt.textContent = valorActual;
+                opt.selected = true;
+                sel.appendChild(opt);
+            }
+        }
+
         function actualizarTabla() {
             const tbody = document.getElementById('cuerpoTabla');
             if (!clientesFiltrados.length) { tbody.innerHTML = '<tr><td colspan="3">No hay clientes</td></tr>'; return; }
@@ -1346,7 +1380,7 @@
                 const todosSel = lista.every(c => c.seleccionado);
                 const selCount = lista.filter(c => c.seleccionado).length;
                 const abierto = gruposAbiertos.has(nom);
-                html += `<tr style="background:rgba(0,0,0,0.02);"><td colspan="3" style="padding:0;"><details ${abierto ? 'open' : ''} ontoggle="registrarToggle('${nom}',this.open)"><summary style="padding:15px; cursor:pointer; display:flex; justify-content:space-between;"><div><label class="switch" style="display:inline-flex; vertical-align:middle;"><input type="checkbox" class="toggle" ${todosSel ? 'checked' : ''} onclick="event.stopPropagation(); toggleGrupo('${nom}',this.checked)"><span class="slider"></span><span class="slider-card"></span></label> <i class="fas fa-store"></i> ${nom.toUpperCase()} <span class="badge-tag">${lista.length}</span></div><div><i class="fas fa-chevron-down"></i></div></summary><table style="width:100%">${lista.map(c => renderFila(c)).join('')}</table></details></td></tr>`;
+                html += `<tr style="background:rgba(0,0,0,0.02);"><td colspan="3" style="padding:0;"><details ${abierto ? 'open' : ''} ontoggle="registrarToggle('${nom}',this.open)"><summary style="padding:15px; cursor:pointer; display:flex; justify-content:space-between;"><div style="display:flex; align-items:center; gap:8px; flex:1;"><label class="switch" style="display:inline-flex; vertical-align:middle;"><input type="checkbox" class="toggle" ${todosSel ? 'checked' : ''} onclick="event.stopPropagation(); toggleGrupo('${nom}',this.checked)"><span class="slider"></span><span class="slider-card"></span></label> <i class="fas fa-store"></i> ${nom.toUpperCase()} <span class="badge-tag">${lista.length}</span></div><div style="display:flex; align-items:center; gap:8px;"><button class="btn-icon" onclick="event.stopPropagation(); desagruparGrupo('${nom.replace(/'/g, "\\'")}')" title="Desagrupar grupo" style="color:var(--danger); font-size:12px;"><i class="fas fa-folder-minus"></i></button><i class="fas fa-chevron-down"></i></div></summary><table style="width:100%">${lista.map(c => renderFila(c)).join('')}</table></details></td></tr>`;
             });
             individuales.forEach(c => html += renderFila(c));
             tbody.innerHTML = html;
@@ -1419,7 +1453,7 @@
             renderizarListaManual(val);
         }
 
-        function agruparManualmente() {
+        async function agruparManualmente() {
             const nombreGrupo = document.getElementById('nombreGrupoManual').value.trim();
             if (!nombreGrupo) {
                 document.getElementById('resultadoManual').innerHTML = `<p style="color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Ingresa un nombre para la carpeta/grupo.</p>`;
@@ -1434,12 +1468,19 @@
 
             const idsSeleccionados = Array.from(checkboxes).map(cb => parseInt(cb.value));
             let count = 0;
-            clientes.forEach(c => {
+            for (const c of clientes) {
                 if (idsSeleccionados.includes(c.id)) {
                     c.cadena = nombreGrupo;
                     count++;
+                    try {
+                        await fetchWithAuth('/api/clientes', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: c.id, nombre: c.nombre, tipo_cliente: c.tipo_cliente, url: c.url_google, cadena: nombreGrupo })
+                        });
+                    } catch (e) { console.error('Error guardando agrupación', c.id, e); }
                 }
-            });
+            }
 
             document.getElementById('resultadoManual').innerHTML = `
                 <div style="background:rgba(46,194,126,0.15); border:1px solid var(--success); color:var(--success); padding:10px; border-radius:10px; font-size:13px; text-align:center;">
@@ -1460,7 +1501,7 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        function agruparPorUbicacion() {
+        async function agruparPorUbicacion() {
             const radio = parseFloat(document.getElementById('radioAgrupacion').value) || 2;
             const nombreBase = document.getElementById('nombreGrupoUbicacion').value.trim();
             const conCoordenadas = clientes.filter(c => c.latitud && c.longitud);
@@ -1486,21 +1527,30 @@
                 document.getElementById('resultadoUbicacion').innerHTML = `<p style="color:var(--warning);"><i class="fas fa-info-circle"></i> No se encontraron clientes dentro del radio de <strong>${radio} km</strong>. Probá con un radio mayor.</p>`;
                 return;
             }
-            // Apply as cadena grouping locally
-            grupos.forEach((grupo, idx) => {
+            // Apply as cadena grouping locally and persist
+            for (let idx = 0; idx < grupos.length; idx++) {
+                const grupo = grupos[idx];
                 const nombreGrupo = nombreBase ? `${nombreBase} ${idx+1}` : `Zona ${idx+1}`;
-                grupo.forEach(c => { c.cadena = nombreGrupo; });
-            });
+                for (const c of grupo) {
+                    c.cadena = nombreGrupo;
+                    try {
+                        await fetchWithAuth('/api/clientes', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: c.id, nombre: c.nombre, tipo_cliente: c.tipo_cliente, url: c.url_google, cadena: nombreGrupo })
+                        });
+                    } catch (e) { console.error('Error guardando agrupación', c.id, e); }
+                }
+            }
             aplicarFiltros();
             const resEl = document.getElementById('resultadoUbicacion');
             resEl.innerHTML = `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); border-radius:12px; padding:14px;">
                 <p style="color:var(--success); font-weight:600; margin-bottom:8px;"><i class="fas fa-check-circle"></i> ${grupos.length} grupo(s) creado(s):</p>
                 ${grupos.map((g, i) => `<p style="font-size:13px; margin:3px 0;">📁 <strong>${nombreBase ? nombreBase + ' ' + (i+1) : 'Zona ' + (i+1)}</strong> — ${g.length} clientes</p>`).join('')}
-                <p style="font-size:11px; color:var(--text-muted-light); margin-top:8px;"><i class="fas fa-info-circle"></i> Los grupos son temporales. Para hacerlos permanentes, edita la cadena de cada cliente.</p>
             </div>`;
         }
 
-        function agruparPorPalabraClave() {
+        async function agruparPorPalabraClave() {
             const palabra = document.getElementById('palabraClave').value.trim().toLowerCase();
             const nombreGrupo = document.getElementById('nombreGrupoPalabra').value.trim();
             if (!palabra) {
@@ -1513,16 +1563,41 @@
                 return;
             }
             const cadena = nombreGrupo || palabra;
-            encontrados.forEach(c => { c.cadena = cadena; });
+            for (const c of encontrados) {
+                c.cadena = cadena;
+                try {
+                    await fetchWithAuth('/api/clientes', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: c.id, nombre: c.nombre, tipo_cliente: c.tipo_cliente, url: c.url_google, cadena })
+                    });
+                } catch (e) { console.error('Error guardando agrupación', c.id, e); }
+            }
             aplicarFiltros();
             document.getElementById('resultadoPalabra').innerHTML = `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); border-radius:12px; padding:14px;">
                 <p style="color:var(--success); font-weight:600; margin-bottom:8px;"><i class="fas fa-check-circle"></i> Grupo creado correctamente:</p>
                 <p style="font-size:13px;">📁 <strong>${escapeHtml(cadena)}</strong> — ${encontrados.length} clientes agrupados</p>
                 <ul style="font-size:12px; color:var(--text-muted-light); margin:8px 0 0 16px;">${encontrados.map(c => `<li>${escapeHtml(c.nombre)}</li>`).join('')}</ul>
-                <p style="font-size:11px; color:var(--text-muted-light); margin-top:8px;"><i class="fas fa-info-circle"></i> Los grupos son temporales. Para hacerlos permanentes, edita la cadena de cada cliente.</p>
             </div>`;
         }
         // =================== FIN AGRUPAR ===================
+
+        async function desagruparGrupo(nombreGrupo) {
+            if (!confirm(`¿Desagrupar el grupo "${nombreGrupo.toUpperCase()}"? Todos los clientes volverán a ser individuales.`)) return;
+            const clientesGrupo = clientes.filter(c => c.cadena && c.cadena.toLowerCase() === nombreGrupo.toLowerCase());
+            for (const c of clientesGrupo) {
+                c.cadena = 'NINGUNO';
+                try {
+                    await fetchWithAuth('/api/clientes', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: c.id, nombre: c.nombre, tipo_cliente: c.tipo_cliente, url: c.url_google, cadena: 'NINGUNO' })
+                    });
+                } catch (e) { console.error('Error desagrupando cliente', c.id, e); }
+            }
+            gruposAbiertos.delete(nombreGrupo);
+            aplicarFiltros();
+        }
 
         function registrarToggle(nom, abierto) { abierto ? gruposAbiertos.add(nom) : gruposAbiertos.delete(nom); }
         function toggleGrupo(nom, sel) {
@@ -1603,9 +1678,9 @@
         }
         syncThemeUI(isDarkModeActive);
 
-        function abrirModalCliente() { document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-plus"></i> Añadir Cliente'; document.getElementById('clienteId').value = ''; document.getElementById('formCliente').reset(); document.getElementById('modalCliente').style.display = 'flex'; }
+        function abrirModalCliente() { document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-plus"></i> Añadir Cliente'; document.getElementById('clienteId').value = ''; document.getElementById('formCliente').reset(); popularSelectCadena('NINGUNO'); document.getElementById('modalCliente').style.display = 'flex'; }
         function cerrarModalCliente() { document.getElementById('modalCliente').style.display = 'none'; }
-        function editarCliente(id) { let c = clientes.find(c => c.id === id); if (!c) return; document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-edit"></i> Editar Cliente'; document.getElementById('clienteId').value = c.id; document.getElementById('clienteNombre').value = c.nombre; document.getElementById('clienteTipo').value = c.tipo_cliente || 'minorista/gastronómico'; document.getElementById('modalCliente').style.display = 'flex'; }
+        function editarCliente(id) { let c = clientes.find(c => c.id === id); if (!c) return; document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-edit"></i> Editar Cliente'; document.getElementById('clienteId').value = c.id; document.getElementById('clienteNombre').value = c.nombre; document.getElementById('clienteTipo').value = c.tipo_cliente || 'minorista/gastronómico'; popularSelectCadena(c.cadena); document.getElementById('modalCliente').style.display = 'flex'; }
         
         function extraerCoordenadas(url) {
             if (!url) return null;
@@ -1662,7 +1737,8 @@
             }
             
             let method = id ? 'PUT' : 'POST'; 
-            let payload = { nombre, tipo_cliente: tipo, url }; 
+            let cadena = document.getElementById('clienteCadena').value || 'NINGUNO';
+            let payload = { nombre, tipo_cliente: tipo, url, cadena }; 
             if (coords) { payload.latitud = coords.lat; payload.longitud = coords.lon; }
             if (id) payload.id = parseInt(id); 
             try { 
